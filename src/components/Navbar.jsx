@@ -12,6 +12,23 @@ function Brand(){
   )
 }
 
+/** Reusable nav item with a “pill” that shows on hover (not route-active). */
+function NavItem({ to, children }){
+  return (
+    <Link
+      to={to}
+      className={[
+        "text-sm font-medium rounded-lg px-3 py-2 transition-colors",
+        "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+      ].join(" ")}
+    >
+      <motion.span whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }}>
+        {children}
+      </motion.span>
+    </Link>
+  )
+}
+
 export function PublicNav(){
   return (
     <nav className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur">
@@ -41,16 +58,15 @@ export function AuthNav(){
     <nav className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Brand/>
-        <div className="flex items-center gap-6">
-          <Link className="text-sm font-medium text-neutral-900" to="/dashboard">
-            <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Dashboard</motion.span>
-          </Link>
-          <Link className="text-sm font-medium text-neutral-900" to="/board">
-            <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Board</motion.span>
-          </Link>
-          <div className="flex items-center gap-2 pl-2">
-            <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold">{initials}</div>
-            <Link to="/settings" className="text-sm text-neutral-900">{name}</Link>
+        <div className="flex items-center gap-4">
+          <NavItem to="/dashboard">Dashboard</NavItem>
+          <NavItem to="/board">Board</NavItem>
+          {/* Avatar + Name pill (hover highlight) */}
+          <div className="flex items-center gap-3 pl-2">
+            <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold">
+              {initials}
+            </div>
+            <NavItem to="/settings">{name}</NavItem>
           </div>
         </div>
       </div>
