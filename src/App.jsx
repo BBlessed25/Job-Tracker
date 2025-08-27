@@ -31,7 +31,7 @@ function AnimatedRoutes(){
           <Route path="/" element={<LandingPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/reset" element={<ResetPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/dashboard" element={isAuthed ? <DashboardPage /> : <Navigate to="/login" replace />} />
           <Route path="/board" element={isAuthed ? <JobBoardPage /> : <Navigate to="/login" replace />} />
           <Route path="/settings" element={isAuthed ? <SettingsPage /> : <Navigate to="/login" replace />} />
