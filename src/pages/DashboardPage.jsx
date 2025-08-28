@@ -1,4 +1,3 @@
-
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
@@ -18,7 +17,9 @@ export default function DashboardPage(){
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Welcome back, {state.user?.fullName || 'John Doe'}! <span className="inline-block">👋</span></h1>
+        <h1 className="text-3xl font-bold">
+          Welcome back, {state.user?.fullName || 'John Doe'}! <span className="inline-block">👋</span>
+        </h1>
         <p className="text-neutral-600">Here's your job search overview</p>
       </div>
 
@@ -38,7 +39,14 @@ export default function DashboardPage(){
           <div className="min-w-0">
             <div className="font-medium text-neutral-900">{state.user?.fullName || 'John Doe'}</div>
             <div className="text-sm text-neutral-500">{state.user?.email || 'frontend@gmail.com'}</div>
-            <div className="text-sm text-neutral-400">Click to edit profile</div>
+            
+            {/* 🔹 Updated: now routes to SettingsPage */}
+            <Link 
+              to="/settings" 
+              className="text-sm text-neutral-400 hover:text-neutral-600 underline underline-offset-2"
+            >
+              Click to edit profile
+            </Link>
           </div>
         </div>
       </div>
