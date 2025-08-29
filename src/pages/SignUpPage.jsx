@@ -1,50 +1,89 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// src/pages/SignUpPage.jsx
+import React, { useState } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import Button from '../components/Button.jsx'
 import { Input } from '../components/Input.jsx'
-import { motion } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
-export default function SignUpPage(){
-  const { signup, state } = useApp()
-  const nav = useNavigate()
-
+export default function SignUpPage() {
+  const { state, signup } = useApp()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
-  const [mismatch, setMismatch] = useState(false)
-
-  useEffect(()=>{ setMismatch(Boolean(confirm) && password !== confirm) }, [password, confirm])
-  useEffect(()=>{ if (state.authStatus === 'authenticated') nav('/dashboard') }, [state.authStatus])
+  const [error, setError] = useState('')
+  const navigate = useNavigate()
 
   const onSubmit = async (e) => {
     e.preventDefault()
-    if (password !== confirm) { setMismatch(true); return }
-    await signup(name, email, password)
+
+    const n = name.trim()
+    const eTrim = email.trim()
+    const p = password.trim()
+    const c = confirm.trim()
+
+    if (!n || !eTrim || !p || !c) {
+      setError('Please fill in all fields')
+      return
+    }
+    if (p !== c) {
+      setError('Passwords do not match')
+      return
+    }
+
+    // Accept ANY valid non-empty inputs → redirect
+    setError('')
+    await signup(n, eTrim, p)
+    navigate('/dashboard')
   }
 
   return (
-    <div className="mx-auto grid min-h-[calc(100vh-80px)] max-w-6xl place-items-center px-4">
-      <div className="w-full max-w-xl rounded-2xl border border-neutral-200 bg-white p-8 shadow-sm">
-        <div className="mb-6 text-center">
-          <h2 className="text-xl font-semibold text-neutral-900">Create your account</h2>
-          <p className="mt-1 text-sm text-neutral-400">Get started with JobTracker today</p>
-        </div>
+    <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4">
+      <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-8">
+        <h2 className="text-center text-lg font-semibold">Create an account</h2>
+        <p className="mb-6 text-center text-sm text-neutral-500">Sign up for JobTracker</p>
 
-        <form className="space-y-4" onSubmit={onSubmit}>
-          <Input label="Full Name" placeholder="Enter your full name" value={name} onChange={(e)=>setName(e.target.value)} />
-          <Input label="Email" type="email" placeholder="Enter your email" value={email} onChange={(e)=>setEmail(e.target.value)} />
-          <Input label="Password" type="password" placeholder="Create a password" value={password} onChange={(e)=>setPassword(e.target.value)} />
-          <Input label="Confirm Password" type="password" placeholder="Confirm your password" value={confirm} onChange={(e)=>setConfirm(e.target.value)} error={mismatch ? 'Passwords do not match' : ''} />
-          <Button className="mt-2 w-full" loading={state.authStatus === 'loading'}>Create Account</Button>
+        <form onSubmit={onSubmit} className="space-y-4">
+          <Input
+            label="Full Name"
+            placeholder="e.g. John Doe"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            label="Email"
+            type="email"
+            placeholder="e.g. name@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            label="Password"
+            type="password"
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          <Input
+            label="Confirm Password"
+            type="password"
+            placeholder="Re-enter your password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+          />
+
+          {error && <p className="text-sm text-rose-600">{error}</p>}
+
+          <Button className="mt-2 w-full" loading={state.authStatus === 'loading'}>
+            Create Account
+          </Button>
         </form>
 
-        <div className="mt-5 text-center text-sm text-neutral-600">
+        <div className="mt-6 text-center text-sm text-neutral-500">
           Already have an account?{' '}
-          <Link to="/login" className="font-semibold text-neutral-900 hover:underline">
-            <motion.span whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }}>Sign in</motion.span>
-          </Link>
+          <a href="/login" className="font-medium text-neutral-900 hover:underline">
+            Login
+          </a>
         </div>
       </div>
     </div>
