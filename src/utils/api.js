@@ -2,8 +2,11 @@ import axios from 'axios'
 
 // Build axios instance (disabled if no base URL provided)
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || undefined,
-  withCredentials: true,
+  baseURL: 'https://seamfix-jobtracker-apis.onrender.com/api',
+  withCredentials: false,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 })
 
 let _token = null
@@ -14,7 +17,7 @@ export function setAuth(token) {
 }
 
 // Simple helpers to decide if we should use the API or local mocks
-export const useApi = Boolean(import.meta.env.VITE_API_BASE_URL)
+export const useApi = true
 
 // Mocks use localStorage as a tiny DB
 const LS_JOBS = 'jt_jobs'

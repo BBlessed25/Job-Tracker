@@ -63,7 +63,10 @@ export function AppProvider({ children }){
         dispatch({ type:'AUTH_SUCCESS', user })
       }
     }catch(err){
-      dispatch({ type:'AUTH_ERROR', error:'Login failed' })
+      console.error('Login error:', err)
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed'
+      dispatch({ type:'AUTH_ERROR', error: errorMessage })
+      throw err // Re-throw to let the component handle it
     }
   }
 
@@ -71,7 +74,12 @@ export function AppProvider({ children }){
     dispatch({ type:'AUTH_LOADING' })
     try{
       if (useApi){
-        const { data } = await api.post('/auth/signup', { name, email, password })
+        const { data } = await api.post('/auth/signup', { 
+          fullName: name, 
+          email, 
+          password 
+        })
+        
         setAuth(data.token)
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
       } else {
@@ -81,7 +89,10 @@ export function AppProvider({ children }){
         dispatch({ type:'AUTH_SUCCESS', user })
       }
     }catch(err){
-      dispatch({ type:'AUTH_ERROR', error:'Signup failed' })
+      console.error('Signup error:', err)
+      const errorMessage = err.response?.data?.message || err.message || 'Signup failed'
+      dispatch({ type:'AUTH_ERROR', error: errorMessage })
+      throw err // Re-throw to let the component handle it
     }
   }
 
