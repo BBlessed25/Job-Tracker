@@ -17,15 +17,20 @@ const THEME = {
 const STATUSES = ['wishlist','applied','interviewing','offer','rejected']
 
 export default function JobBoardPage() {
-  const { state, updateJob, deleteJob, addJob } = useApp() // ⬅️ uses addJob from context
+  const { state, updateJob, deleteJob, addJob, fetchJobs } = useApp() // ⬅️ uses addJob from context
 
-  const grouped = useMemo(() => ({
-    wishlist: state.jobs.filter(j=>j.status==='wishlist'),
-    applied: state.jobs.filter(j=>j.status==='applied'),
-    interviewing: state.jobs.filter(j=>j.status==='interviewing'),
-    offer: state.jobs.filter(j=>j.status==='offer'),
-    rejected: state.jobs.filter(j=>j.status==='rejected'),
-  }), [state.jobs])
+  const grouped = useMemo(() => {
+    console.log('Current jobs state:', state.jobs)
+    const groupedJobs = {
+      wishlist: state.jobs.filter(j=>j.status==='wishlist'),
+      applied: state.jobs.filter(j=>j.status==='applied'),
+      interviewing: state.jobs.filter(j=>j.status==='interviewing'),
+      offer: state.jobs.filter(j=>j.status==='offer'),
+      rejected: state.jobs.filter(j=>j.status==='rejected'),
+    }
+    console.log('Grouped jobs:', groupedJobs)
+    return groupedJobs
+  }, [state.jobs])
 
   const handleDrop = (e, targetStatus) => {
     e.preventDefault()
@@ -90,6 +95,11 @@ export default function JobBoardPage() {
     })
     closeCreate()
   }
+
+  // Fetch jobs when component mounts
+  useEffect(() => {
+    fetchJobs()
+  }, [fetchJobs])
 
   // close modals on ESC
   useEffect(() => {

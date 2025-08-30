@@ -54,6 +54,7 @@ export function AppProvider({ children }){
     try{
       if (useApi){
         const { data } = await api.post('/auth/login', { email, password })
+        console.log('Login successful, setting auth token:', data.token)
         setAuth(data.token)
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
       } else {
@@ -80,6 +81,7 @@ export function AppProvider({ children }){
           password 
         })
         
+        console.log('Signup successful, setting auth token:', data.token)
         setAuth(data.token)
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
       } else {
@@ -107,12 +109,25 @@ export function AppProvider({ children }){
     try{
       if (useApi){
         const { data } = await api.get('/jobs')
-        dispatch({ type:'JOBS_SET', jobs: data })
+        
+        // Map API response to frontend format
+        const mappedJobs = data.map(job => ({
+          ...job,
+          id: job.id || job._id, // Use id if available, fallback to _id
+          status: job.status?.toLowerCase() || 'wishlist', // Convert status to lowercase
+          url: job.link || '', // Map link to url for frontend compatibility
+          summary: job.notes || '', // Map notes to summary for frontend compatibility
+          updatedAt: job.updatedAt || job.createdAt || new Date().toISOString().slice(0,10)
+        }))
+        
+        console.log('Fetched jobs:', mappedJobs)
+        dispatch({ type:'JOBS_SET', jobs: mappedJobs })
       } else {
         await new Promise(r=>setTimeout(r,300))
         dispatch({ type:'JOBS_SET', jobs: mock.listJobs() })
       }
     }catch(err){
+      console.error('Failed to fetch jobs:', err)
       dispatch({ type:'JOBS_ERROR', error:'Failed to load jobs' })
     }
   }
@@ -129,7 +144,19 @@ export function AppProvider({ children }){
       updatedAt: fmtDate(new Date()),
     }
     if (useApi){
-      await api.post('/jobs', job)
+      // Use the new API endpoint for creating jobs
+      const jobData = {
+        title: data.title?.trim() || 'Untitled role',
+        company: data.company?.trim() || 'Unknown',
+        status: data.status ? data.status.charAt(0).toUpperCase() + data.status.slice(1) : 'Wishlist',
+        salary: data.salary || '',
+        notes: data.notes || '',
+        link: data.url || '' // Map url to link for API compatibility
+      }
+      
+      console.log('Creating job with data:', jobData)
+      const response = await api.post('/jobs/create', jobData)
+      console.log('Job created successfully:', response.data)
       await fetchJobs()
       return
     }
@@ -140,7 +167,28 @@ export function AppProvider({ children }){
 
   const updateJob = async (id, updates) => {
     if (useApi){
-      await api.patch(`/jobs/${id}`, updates)
+      // Map frontend updates to API format
+      const apiUpdates = { ...updates }
+      
+      // Capitalize status if it's being updated
+      if (updates.status) {
+        apiUpdates.status = updates.status.charAt(0).toUpperCase() + updates.status.slice(1)
+      }
+      
+      // Map url to link for API compatibility
+      if (updates.url !== undefined) {
+        apiUpdates.link = updates.url
+        delete apiUpdates.url
+      }
+      
+      // Map summary to notes for API compatibility
+      if (updates.summary !== undefined) {
+        apiUpdates.notes = updates.summary
+        delete apiUpdates.summary
+      }
+      
+      console.log('Updating job with API data:', apiUpdates)
+      await api.patch(`/jobs/${id}`, apiUpdates)
       await fetchJobs()
       return
     }
