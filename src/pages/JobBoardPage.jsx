@@ -21,12 +21,14 @@ export default function JobBoardPage() {
 
   const grouped = useMemo(() => {
     console.log('Current jobs state:', state.jobs)
+    // Ensure state.jobs is an array to prevent errors
+    const jobs = Array.isArray(state.jobs) ? state.jobs : []
     const groupedJobs = {
-      wishlist: state.jobs.filter(j=>j.status==='wishlist'),
-      applied: state.jobs.filter(j=>j.status==='applied'),
-      interviewing: state.jobs.filter(j=>j.status==='interviewing'),
-      offer: state.jobs.filter(j=>j.status==='offer'),
-      rejected: state.jobs.filter(j=>j.status==='rejected'),
+      wishlist: jobs.filter(j=>j.status==='wishlist'),
+      applied: jobs.filter(j=>j.status==='applied'),
+      interviewing: jobs.filter(j=>j.status==='interviewing'),
+      offer: jobs.filter(j=>j.status==='offer'),
+      rejected: jobs.filter(j=>j.status==='rejected'),
     }
     console.log('Grouped jobs:', groupedJobs)
     return groupedJobs
@@ -35,7 +37,10 @@ export default function JobBoardPage() {
   const handleDrop = (e, targetStatus) => {
     e.preventDefault()
     const id = e.dataTransfer.getData('text/plain')
-    if (id) updateJob(id, { status: targetStatus })
+    if (id) {
+      console.log('Dropping job:', id, 'to status:', targetStatus)
+      updateJob(id, { status: targetStatus })
+    }
   }
 
   // -------- Edit Modal State --------
@@ -82,8 +87,16 @@ export default function JobBoardPage() {
   const onUpdateJob = async (e) => {
     e.preventDefault()
     if (!editing) return
-    await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
-    closeEdit()
+    
+    console.log('Updating job:', editing.id, 'with data:', { title, company, url, salary, status, summary: notes })
+    
+    try {
+      await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
+      console.log('Job updated successfully')
+      closeEdit()
+    } catch (error) {
+      console.error('Failed to update job:', error)
+    }
   }
 
   const onAddJob = async (e) => {
@@ -96,10 +109,12 @@ export default function JobBoardPage() {
     closeCreate()
   }
 
-  // Fetch jobs when component mounts
+  // Fetch jobs when component mounts and user is authenticated
   useEffect(() => {
-    fetchJobs()
-  }, [fetchJobs])
+    if (state.user && state.authStatus === 'authenticated') {
+      fetchJobs()
+    }
+  }, [state.user, state.authStatus]) // Only fetch when user authentication changes
 
   // close modals on ESC
   useEffect(() => {
@@ -130,34 +145,69 @@ export default function JobBoardPage() {
         </button>
       </div>
 
-      {/* Two-column layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {STATUSES.map((key) => (
-          <Column
-            key={key}
-            title={THEME[key].title}
-            count={grouped[key].length}
-            theme={THEME[key]}
-            onDrop={(e) => handleDrop(e, key)}
+      {/* Not Authenticated State */}
+      {state.authStatus !== 'authenticated' && (
+        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-8 text-center">
+          <div className="text-lg font-semibold text-blue-900">Please Log In</div>
+          <div className="text-sm text-blue-700 mt-2">You need to be logged in to view and manage your jobs</div>
+          <Link to="/login" className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            Go to Login
+          </Link>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {state.authStatus === 'authenticated' && state.jobsStatus === 'loading' && (
+        <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+          <div className="text-lg font-semibold text-neutral-900">Loading jobs...</div>
+          <div className="text-sm text-neutral-500">Please wait while we fetch your job applications</div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {state.authStatus === 'authenticated' && state.error && (
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-6">
+          <div className="text-lg font-semibold text-rose-900">Error Loading Jobs</div>
+          <div className="text-sm text-rose-700 mt-2">{state.error}</div>
+          <button 
+            onClick={() => fetchJobs()} 
+            className="mt-3 rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700"
           >
-            {grouped[key].length === 0 ? (
-              <EmptyState />
-            ) : (
-              <div className="space-y-4">
-                {grouped[key].map(job => (
-                  <JobCard
-                    key={job.id}
-                    job={job}
-                    theme={THEME[job.status] || THEME.wishlist}
-                    onEdit={() => openEdit(job)}
-                    onDelete={() => deleteJob(job.id)}
-                  />
-                ))}
-              </div>
-            )}
-          </Column>
-        ))}
-      </div>
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Two-column layout */}
+      {state.jobsStatus !== 'loading' && !state.error && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {STATUSES.map((key) => (
+            <Column
+              key={key}
+              title={THEME[key].title}
+              count={grouped[key].length}
+              theme={THEME[key]}
+              onDrop={(e) => handleDrop(e, key)}
+            >
+              {grouped[key].length === 0 ? (
+                <EmptyState />
+              ) : (
+                <div className="space-y-4">
+                  {grouped[key].map(job => (
+                    <JobCard
+                      key={job.id}
+                      job={job}
+                      theme={THEME[job.status] || THEME.wishlist}
+                      onEdit={() => openEdit(job)}
+                      onDelete={() => deleteJob(job.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </Column>
+          ))}
+        </div>
+      )}
 
       {/* Footer Tip */}
       <div className="mt-8 rounded-2xl bg-neutral-100 px-4 py-3 text-center text-neutral-600">

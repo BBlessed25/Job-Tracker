@@ -56,6 +56,7 @@ export function AppProvider({ children }){
         const { data } = await api.post('/auth/login', { email, password })
         console.log('Login successful, setting auth token:', data.token)
         setAuth(data.token)
+        console.log('Auth token set, now fetching jobs...')
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
       } else {
         await new Promise(r=>setTimeout(r,500))
@@ -108,6 +109,7 @@ export function AppProvider({ children }){
     dispatch({ type:'JOBS_LOADING' })
     try{
       if (useApi){
+        console.log('Attempting to fetch jobs from API...')
         const { data } = await api.get('/jobs')
         
         // Map API response to frontend format
@@ -120,7 +122,7 @@ export function AppProvider({ children }){
           updatedAt: job.updatedAt || job.createdAt || new Date().toISOString().slice(0,10)
         }))
         
-        console.log('Fetched jobs:', mappedJobs)
+        console.log('Fetched jobs successfully:', mappedJobs)
         dispatch({ type:'JOBS_SET', jobs: mappedJobs })
       } else {
         await new Promise(r=>setTimeout(r,300))
@@ -128,7 +130,22 @@ export function AppProvider({ children }){
       }
     }catch(err){
       console.error('Failed to fetch jobs:', err)
-      dispatch({ type:'JOBS_ERROR', error:'Failed to load jobs' })
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to load jobs'
+      if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Please check your internet connection.'
+      } else if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Please try again.'
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in again.'
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Please check your permissions.'
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      }
+      
+      dispatch({ type:'JOBS_ERROR', error: errorMessage })
     }
   }
 
@@ -188,7 +205,8 @@ export function AppProvider({ children }){
       }
       
       console.log('Updating job with API data:', apiUpdates)
-      await api.patch(`/jobs/${id}`, apiUpdates)
+      // Use PUT method as specified in the API documentation
+      await api.put(`/jobs/${id}`, apiUpdates)
       await fetchJobs()
       return
     }
