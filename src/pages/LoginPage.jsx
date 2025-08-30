@@ -22,9 +22,21 @@ export default function LoginPage() {
       return
     }
 
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(eTrim)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setError('')
-    await login(eTrim, pTrim)
-    navigate('/dashboard')
+    try {
+      await login(eTrim, pTrim)
+      navigate('/dashboard')
+    } catch (err) {
+      // Error is already handled in the context, but we can add local error handling if needed
+      console.error('Login failed:', err)
+    }
   }
 
   return (
@@ -52,6 +64,7 @@ export default function LoginPage() {
           />
 
           {error && <p className="text-sm text-rose-600">{error}</p>}
+          {state.error && <p className="text-sm text-rose-600">{state.error}</p>}
 
           <Button className="mt-2 w-full" loading={state.authStatus === 'loading'}>
             Sign In
