@@ -30,11 +30,36 @@ export default function SignUpPage() {
       setError('Passwords do not match')
       return
     }
+    
+    // Password validation - must contain at least 8 characters, one uppercase, one lowercase, one number, and one special character
+    if (p.length < 8) {
+      setError('Password must be at least 8 characters long')
+      return
+    }
+    if (!/(?=.*[a-z])/.test(p)) {
+      setError('Password must contain at least one lowercase letter')
+      return
+    }
+    if (!/(?=.*[A-Z])/.test(p)) {
+      setError('Password must contain at least one uppercase letter')
+      return
+    }
+    if (!/(?=.*\d)/.test(p)) {
+      setError('Password must contain at least one number')
+      return
+    }
+    if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(p)) {
+      setError('Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)')
+      return
+    }
 
-    // Accept ANY valid non-empty inputs → redirect
     setError('')
-    await signup(n, eTrim, p)
-    navigate('/dashboard')
+    try {
+      await signup(n, eTrim, p)
+      navigate('/dashboard')
+    } catch (err) {
+      setError('Signup failed. Please try again.')
+    }
   }
 
   return (
@@ -73,6 +98,7 @@ export default function SignUpPage() {
           />
 
           {error && <p className="text-sm text-rose-600">{error}</p>}
+          {state.error && <p className="text-sm text-rose-600">{state.error}</p>}
 
           <Button className="mt-2 w-full" loading={state.authStatus === 'loading'}>
             Create Account
