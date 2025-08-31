@@ -16,28 +16,94 @@ function Row({ label, value }){
 }
 
 export default function SettingsPage(){
-  const { state, updateProfile, changePassword, logout } = useApp()
+  const { state, updateProfile, changePassword, logout, fetchUserProfile } = useApp()
   const [fullName, setFullName] = useState(state.user?.fullName || 'John Doe')
   const [email, setEmail] = useState(state.user?.email || 'JOHN@GMAIL.COM')
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
+  const [loadingProfile, setLoadingProfile] = useState(false)
   const [notice, setNotice] = useState(null)
 
+  // Fetch user profile when component mounts
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      // Only fetch if authenticated and user data is not already loaded
+      if (state.authStatus === 'authenticated' && !state.user?.id && !loadingProfile) {
+        setLoadingProfile(true)
+        try {
+          const userData = await fetchUserProfile()
+          setFullName(userData?.fullName || 'John Doe')
+          setEmail((userData?.email || 'john@gmail.com').toUpperCase())
+        } catch (error) {
+          console.error('Failed to load user profile:', error)
+          setNotice({ type: 'error', text: 'Failed to load profile information' })
+        } finally {
+          setLoadingProfile(false)
+        }
+      }
+    }
+    
+    loadUserProfile()
+  }, [state.authStatus]) // Remove fetchUserProfile from dependencies
+
   useEffect(()=>{
-    setFullName(state.user?.fullName || 'John Doe')
-    setEmail((state.user?.email || 'JOHN@GMAIL.COM').toUpperCase())
+    if (state.user?.id) {
+      setFullName(state.user?.fullName || 'John Doe')
+      setEmail((state.user?.email || 'john@gmail.com').toUpperCase())
+    }
   }, [state.user])
 
   const initials = (fullName || 'John Doe').split(' ').map(p=>p[0]).slice(0,2).join('') || 'J'
 
   const onSaveProfile = async (e) => {
     e.preventDefault()
+    
+    // Basic validation
+    if (!fullName.trim()) {
+      setNotice({ type:'error', text:'Full name is required.' })
+      return
+    }
+    
+    if (!email.trim()) {
+      setNotice({ type:'error', text:'Email is required.' })
+      return
+    }
+    
+    // Check if email format is valid
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email.toLowerCase())) {
+      setNotice({ type:'error', text:'Please enter a valid email address.' })
+      return
+    }
+    
+    // Check if email is the same as current user's email
+    const currentEmail = state.user?.email?.toLowerCase()
+    const newEmail = email.toLowerCase()
+    if (currentEmail && newEmail === currentEmail) {
+      setNotice({ type:'error', text:'You are already using this email address. Please enter a different email or keep the current one.' })
+      return
+    }
+    
+    // Check if there are any actual changes
+    const currentFullName = state.user?.fullName || ''
+    if (currentFullName === fullName && currentEmail === newEmail) {
+      setNotice({ type:'info', text:'No changes detected. Your profile is already up to date.' })
+      return
+    }
+    
     setSavingProfile(true)
     try{
-      await updateProfile?.({ fullName, email })
+      // Send email in lowercase to avoid API validation issues
+      const emailToSend = email.toLowerCase()
+      console.log('Saving profile with data:', { fullName, email: emailToSend })
+      await updateProfile?.({ fullName, email: emailToSend })
       setNotice({ type:'success', text:'Profile updated successfully!' })
+    } catch (error) {
+      console.error('Failed to update profile:', error)
+      const errorMessage = error.message || 'Failed to update profile. Please try again.'
+      setNotice({ type:'error', text: errorMessage })
     } finally {
       setSavingProfile(false)
     }
@@ -53,9 +119,22 @@ export default function SettingsPage(){
       setNotice({ type:'error', text:'Passwords do not match' })
       return
     }
-    await changePassword?.({ currentPassword, newPassword })
-    setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('')
-    setNotice({ type:'success', text:'Password updated successfully!' })
+    
+    // Basic password validation
+    if (newPassword.length < 6) {
+      setNotice({ type:'error', text:'New password must be at least 6 characters long' })
+      return
+    }
+    
+    try {
+      await changePassword?.({ currentPassword, newPassword })
+      setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('')
+      setNotice({ type:'success', text:'Password updated successfully!' })
+    } catch (error) {
+      console.error('Password change failed:', error)
+      const errorMessage = error.message || 'Failed to change password. Please try again.'
+      setNotice({ type:'error', text: errorMessage })
+    }
   }
 
   return (
@@ -75,7 +154,11 @@ export default function SettingsPage(){
       {/* Notices */}
       {notice && (
         <div className={
-          `mb-6 rounded-2xl border p-4 text-sm ${notice.type==='success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`
+          `mb-6 rounded-2xl border p-4 text-sm ${
+            notice.type==='success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 
+            notice.type==='info' ? 'border-blue-200 bg-blue-50 text-blue-800' :
+            'border-rose-200 bg-rose-50 text-rose-700'
+          }`
         }>
           {notice.text}
         </div>
@@ -84,9 +167,35 @@ export default function SettingsPage(){
       {/* Profile Information */}
       <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
         <div className="mb-5">
-          <div className="flex items-center gap-2 text-neutral-900">
-            <span className="inline-grid h-6 w-6 place-content-center rounded-md bg-neutral-900 text-xs text-white">👤</span>
-            <span className="font-semibold">Profile Information</span>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-neutral-900">
+              <span className="inline-grid h-6 w-6 place-content-center rounded-md bg-neutral-900 text-xs text-white">👤</span>
+              <span className="font-semibold">Profile Information</span>
+              {loadingProfile && (
+                <span className="text-sm text-neutral-500">(Loading...)</span>
+              )}
+            </div>
+            <button
+              onClick={async () => {
+                if (loadingProfile) return // Prevent multiple simultaneous requests
+                setLoadingProfile(true)
+                try {
+                  const userData = await fetchUserProfile()
+                  setFullName(userData?.fullName || 'John Doe')
+                  setEmail((userData?.email || 'john@gmail.com').toUpperCase())
+                  setNotice({ type: 'success', text: 'Profile refreshed successfully!' })
+                } catch (error) {
+                  console.error('Failed to refresh profile:', error)
+                  setNotice({ type: 'error', text: 'Failed to refresh profile' })
+                } finally {
+                  setLoadingProfile(false)
+                }
+              }}
+              disabled={loadingProfile}
+              className="text-sm text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
+            >
+              🔄 Refresh
+            </button>
           </div>
         <p className="text-sm text-neutral-500">Update your personal information and contact details</p>
         </div>

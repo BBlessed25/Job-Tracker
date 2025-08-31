@@ -54,7 +54,9 @@ export function AppProvider({ children }){
     try{
       if (useApi){
         const { data } = await api.post('/auth/login', { email, password })
+        console.log('Login successful, setting auth token:', data.token)
         setAuth(data.token)
+        console.log('Auth token set, now fetching jobs...')
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
       } else {
         await new Promise(r=>setTimeout(r,500))
@@ -63,7 +65,10 @@ export function AppProvider({ children }){
         dispatch({ type:'AUTH_SUCCESS', user })
       }
     }catch(err){
-      dispatch({ type:'AUTH_ERROR', error:'Login failed' })
+      console.error('Login error:', err)
+      const errorMessage = err.response?.data?.message || err.message || 'Login failed'
+      dispatch({ type:'AUTH_ERROR', error: errorMessage })
+      throw err // Re-throw to let the component handle it
     }
   }
 
@@ -71,7 +76,13 @@ export function AppProvider({ children }){
     dispatch({ type:'AUTH_LOADING' })
     try{
       if (useApi){
-        const { data } = await api.post('/auth/signup', { name, email, password })
+        const { data } = await api.post('/auth/signup', { 
+          fullName: name, 
+          email, 
+          password 
+        })
+        
+        console.log('Signup successful, setting auth token:', data.token)
         setAuth(data.token)
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
       } else {
@@ -81,7 +92,10 @@ export function AppProvider({ children }){
         dispatch({ type:'AUTH_SUCCESS', user })
       }
     }catch(err){
-      dispatch({ type:'AUTH_ERROR', error:'Signup failed' })
+      console.error('Signup error:', err)
+      const errorMessage = err.response?.data?.message || err.message || 'Signup failed'
+      dispatch({ type:'AUTH_ERROR', error: errorMessage })
+      throw err // Re-throw to let the component handle it
     }
   }
 
@@ -95,14 +109,43 @@ export function AppProvider({ children }){
     dispatch({ type:'JOBS_LOADING' })
     try{
       if (useApi){
+        console.log('Attempting to fetch jobs from API...')
         const { data } = await api.get('/jobs')
-        dispatch({ type:'JOBS_SET', jobs: data })
+        
+        // Map API response to frontend format
+        const mappedJobs = data.map(job => ({
+          ...job,
+          id: job.id || job._id, // Use id if available, fallback to _id
+          status: job.status?.toLowerCase() || 'wishlist', // Convert status to lowercase
+          url: job.link || '', // Map link to url for frontend compatibility
+          summary: job.notes || '', // Map notes to summary for frontend compatibility
+          updatedAt: job.updatedAt || job.createdAt || new Date().toISOString().slice(0,10)
+        }))
+        
+        console.log('Fetched jobs successfully:', mappedJobs)
+        dispatch({ type:'JOBS_SET', jobs: mappedJobs })
       } else {
         await new Promise(r=>setTimeout(r,300))
         dispatch({ type:'JOBS_SET', jobs: mock.listJobs() })
       }
     }catch(err){
-      dispatch({ type:'JOBS_ERROR', error:'Failed to load jobs' })
+      console.error('Failed to fetch jobs:', err)
+      
+      // Provide more specific error messages
+      let errorMessage = 'Failed to load jobs'
+      if (err.code === 'ERR_NETWORK') {
+        errorMessage = 'Network error. Please check your internet connection.'
+      } else if (err.code === 'ECONNABORTED') {
+        errorMessage = 'Request timeout. Please try again.'
+      } else if (err.response?.status === 401) {
+        errorMessage = 'Authentication required. Please log in again.'
+      } else if (err.response?.status === 403) {
+        errorMessage = 'Access denied. Please check your permissions.'
+      } else if (err.response?.status >= 500) {
+        errorMessage = 'Server error. Please try again later.'
+      }
+      
+      dispatch({ type:'JOBS_ERROR', error: errorMessage })
     }
   }
 
@@ -118,7 +161,19 @@ export function AppProvider({ children }){
       updatedAt: fmtDate(new Date()),
     }
     if (useApi){
-      await api.post('/jobs', job)
+      // Use the new API endpoint for creating jobs
+      const jobData = {
+        title: data.title?.trim() || 'Untitled role',
+        company: data.company?.trim() || 'Unknown',
+        status: data.status ? data.status.charAt(0).toUpperCase() + data.status.slice(1) : 'Wishlist',
+        salary: data.salary || '',
+        notes: data.notes || '',
+        link: data.url || '' // Map url to link for API compatibility
+      }
+      
+      console.log('Creating job with data:', jobData)
+      const response = await api.post('/jobs/create', jobData)
+      console.log('Job created successfully:', response.data)
       await fetchJobs()
       return
     }
@@ -129,7 +184,29 @@ export function AppProvider({ children }){
 
   const updateJob = async (id, updates) => {
     if (useApi){
-      await api.patch(`/jobs/${id}`, updates)
+      // Map frontend updates to API format
+      const apiUpdates = { ...updates }
+      
+      // Capitalize status if it's being updated
+      if (updates.status) {
+        apiUpdates.status = updates.status.charAt(0).toUpperCase() + updates.status.slice(1)
+      }
+      
+      // Map url to link for API compatibility
+      if (updates.url !== undefined) {
+        apiUpdates.link = updates.url
+        delete apiUpdates.url
+      }
+      
+      // Map summary to notes for API compatibility
+      if (updates.summary !== undefined) {
+        apiUpdates.notes = updates.summary
+        delete apiUpdates.summary
+      }
+      
+      console.log('Updating job with API data:', apiUpdates)
+      // Use PUT method as specified in the API documentation
+      await api.put(`/jobs/${id}`, apiUpdates)
       await fetchJobs()
       return
     }
@@ -149,26 +226,81 @@ export function AppProvider({ children }){
     mock.saveJobs(next)
   }
 
+  const fetchUserProfile = async () => {
+    if (useApi){
+      try {
+        console.log('Fetching user profile...')
+        const { data } = await api.get('/users/me')
+        console.log('User profile fetched:', data)
+        dispatch({ type:'AUTH_SUCCESS', user: data })
+        return data
+      } catch (err) {
+        console.error('Failed to fetch user profile:', err)
+        throw err
+      }
+    }
+    return state.user
+  }
+
   const updateProfile = async (data) => {
     if (useApi){
-      const { data:u } = await api.patch('/me', data)
-      dispatch({ type:'AUTH_SUCCESS', user:u })
-      return
+      console.log('Updating profile with data:', data)
+      try {
+        const { data:u } = await api.put('/users/me', data)
+        console.log('Profile updated successfully:', u)
+        dispatch({ type:'AUTH_SUCCESS', user:u })
+        return u
+      } catch (err) {
+        console.error('Profile update error:', err.response?.data || err.message)
+        
+        // Check for specific error messages in the response
+        const errorMessage = err.response?.data?.message || err.message
+        
+        if (err.response?.status === 409 || errorMessage.includes('already in use')) {
+          throw new Error('Email already in use by another user. Please choose a different email address.')
+        } else if (errorMessage.includes('already using this email')) {
+          throw new Error('You are already using this email address. No changes were made.')
+        } else if (err.response?.status === 400) {
+          throw new Error('Invalid data provided. Please check your information and try again.')
+        } else {
+          throw new Error('Failed to update profile. Please try again.')
+        }
+      }
     }
     const u = { ...(state.user || {}), ...data }
     mock.setUser(u)
     dispatch({ type:'AUTH_SUCCESS', user:u })
+    return u
   }
 
   const changePassword = async ({ currentPassword, newPassword }) => {
     if (useApi){
-      await api.post('/auth/change-password', { currentPassword, newPassword })
-      return
+      console.log('Changing password...')
+      try {
+        await api.put('/users/me/password', { currentPassword, newPassword })
+        console.log('Password changed successfully')
+        return
+      } catch (err) {
+        console.error('Password change error:', err.response?.data || err.message)
+        
+        // Provide specific error messages based on response
+        const errorMessage = err.response?.data?.message || err.message
+        
+        if (err.response?.status === 400) {
+          throw new Error('Invalid password. Please check your current password and try again.')
+        } else if (err.response?.status === 401) {
+          throw new Error('Authentication required. Please log in again.')
+        } else if (errorMessage.includes('current password')) {
+          throw new Error('Current password is incorrect. Please try again.')
+        } else {
+          throw new Error('Failed to change password. Please try again.')
+        }
+      }
     }
     await new Promise(r=>setTimeout(r,400))
   }
 
-  const value = useMemo(()=>({ state, login, signup, logout, fetchJobs, addJob, updateJob, deleteJob, updateProfile, changePassword }), [state])
+  const value = useMemo(()=>({ state, login, signup, logout, fetchJobs, addJob, updateJob, deleteJob, updateProfile, changePassword, fetchUserProfile }), [state])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
