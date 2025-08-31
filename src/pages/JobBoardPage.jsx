@@ -50,6 +50,10 @@ export default function JobBoardPage() {
   // -------- Create Modal State --------
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
+  // -------- Delete Modal State --------
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [deletingJob, setDeletingJob] = useState(null)
+
   // shared form fields (we reuse for edit/create)
   const [title, setTitle] = useState('')
   const [company, setCompany] = useState('')
@@ -84,6 +88,13 @@ export default function JobBoardPage() {
   }
   const closeCreate = () => setIsCreateOpen(false)
 
+  // Delete confirmation functions
+  const openDelete = (job) => {
+    setDeletingJob(job)
+    setIsDeleteOpen(true)
+  }
+  const closeDelete = () => { setIsDeleteOpen(false); setDeletingJob(null) }
+
   const onUpdateJob = async (e) => {
     e.preventDefault()
     if (!editing) return
@@ -109,6 +120,19 @@ export default function JobBoardPage() {
     closeCreate()
   }
 
+  const onDeleteJob = async () => {
+    if (!deletingJob) return
+    
+    try {
+      console.log('Deleting job:', deletingJob.id)
+      await deleteJob(deletingJob.id)
+      console.log('Job deleted successfully')
+      closeDelete()
+    } catch (error) {
+      console.error('Failed to delete job:', error)
+    }
+  }
+
   // Fetch jobs when component mounts and user is authenticated
   useEffect(() => {
     if (state.user && state.authStatus === 'authenticated') {
@@ -122,11 +146,12 @@ export default function JobBoardPage() {
       if (e.key === 'Escape') {
         if (isEditOpen) closeEdit()
         if (isCreateOpen) closeCreate()
+        if (isDeleteOpen) closeDelete()
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isEditOpen, isCreateOpen])
+  }, [isEditOpen, isCreateOpen, isDeleteOpen])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
@@ -194,13 +219,13 @@ export default function JobBoardPage() {
               ) : (
                 <div className="space-y-4">
                   {grouped[key].map(job => (
-                    <JobCard
-                      key={job.id}
-                      job={job}
-                      theme={THEME[job.status] || THEME.wishlist}
-                      onEdit={() => openEdit(job)}
-                      onDelete={() => deleteJob(job.id)}
-                    />
+                                      <JobCard
+                    key={job.id}
+                    job={job}
+                    theme={THEME[job.status] || THEME.wishlist}
+                    onEdit={() => openEdit(job)}
+                    onDelete={() => openDelete(job)}
+                  />
                   ))}
                 </div>
               )}
@@ -248,6 +273,44 @@ export default function JobBoardPage() {
             onSubmit={onAddJob}
             submitLabel="Add Job"
           />
+        </Modal>
+      )}
+
+      {/* ---------- Delete Confirmation Modal ---------- */}
+      {isDeleteOpen && deletingJob && (
+        <Modal onClose={closeDelete}>
+          <div className="px-6 pt-5 pb-6">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-100">
+                <svg className="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-neutral-900">Delete Job</h3>
+              <div className="mt-2 text-sm text-neutral-500">
+                Are you sure you want to delete <strong>"{deletingJob.title}"</strong> at <strong>"{deletingJob.company}"</strong>?
+              </div>
+              <div className="mt-4 text-xs text-neutral-400">
+                This action cannot be undone.
+              </div>
+            </div>
+            <div className="mt-6 flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={closeDelete}
+                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onDeleteJob}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
+              >
+                Delete Job
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
     </div>
