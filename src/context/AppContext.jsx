@@ -226,15 +226,51 @@ export function AppProvider({ children }){
     mock.saveJobs(next)
   }
 
+  const fetchUserProfile = async () => {
+    if (useApi){
+      try {
+        console.log('Fetching user profile...')
+        const { data } = await api.get('/users/me')
+        console.log('User profile fetched:', data)
+        dispatch({ type:'AUTH_SUCCESS', user: data })
+        return data
+      } catch (err) {
+        console.error('Failed to fetch user profile:', err)
+        throw err
+      }
+    }
+    return state.user
+  }
+
   const updateProfile = async (data) => {
     if (useApi){
-      const { data:u } = await api.patch('/me', data)
-      dispatch({ type:'AUTH_SUCCESS', user:u })
-      return
+      console.log('Updating profile with data:', data)
+      try {
+        const { data:u } = await api.put('/users/me', data)
+        console.log('Profile updated successfully:', u)
+        dispatch({ type:'AUTH_SUCCESS', user:u })
+        return u
+      } catch (err) {
+        console.error('Profile update error:', err.response?.data || err.message)
+        
+        // Check for specific error messages in the response
+        const errorMessage = err.response?.data?.message || err.message
+        
+        if (err.response?.status === 409 || errorMessage.includes('already in use')) {
+          throw new Error('Email already in use by another user. Please choose a different email address.')
+        } else if (errorMessage.includes('already using this email')) {
+          throw new Error('You are already using this email address. No changes were made.')
+        } else if (err.response?.status === 400) {
+          throw new Error('Invalid data provided. Please check your information and try again.')
+        } else {
+          throw new Error('Failed to update profile. Please try again.')
+        }
+      }
     }
     const u = { ...(state.user || {}), ...data }
     mock.setUser(u)
     dispatch({ type:'AUTH_SUCCESS', user:u })
+    return u
   }
 
   const changePassword = async ({ currentPassword, newPassword }) => {
@@ -245,7 +281,7 @@ export function AppProvider({ children }){
     await new Promise(r=>setTimeout(r,400))
   }
 
-  const value = useMemo(()=>({ state, login, signup, logout, fetchJobs, addJob, updateJob, deleteJob, updateProfile, changePassword }), [state])
+  const value = useMemo(()=>({ state, login, signup, logout, fetchJobs, addJob, updateJob, deleteJob, updateProfile, changePassword, fetchUserProfile }), [state])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
