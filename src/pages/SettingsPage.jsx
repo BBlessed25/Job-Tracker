@@ -119,9 +119,22 @@ export default function SettingsPage(){
       setNotice({ type:'error', text:'Passwords do not match' })
       return
     }
-    await changePassword?.({ currentPassword, newPassword })
-    setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('')
-    setNotice({ type:'success', text:'Password updated successfully!' })
+    
+    // Basic password validation
+    if (newPassword.length < 6) {
+      setNotice({ type:'error', text:'New password must be at least 6 characters long' })
+      return
+    }
+    
+    try {
+      await changePassword?.({ currentPassword, newPassword })
+      setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('')
+      setNotice({ type:'success', text:'Password updated successfully!' })
+    } catch (error) {
+      console.error('Password change failed:', error)
+      const errorMessage = error.message || 'Failed to change password. Please try again.'
+      setNotice({ type:'error', text: errorMessage })
+    }
   }
 
   return (

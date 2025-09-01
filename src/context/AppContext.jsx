@@ -275,8 +275,27 @@ export function AppProvider({ children }){
 
   const changePassword = async ({ currentPassword, newPassword }) => {
     if (useApi){
-      await api.post('/auth/change-password', { currentPassword, newPassword })
-      return
+      console.log('Changing password...')
+      try {
+        await api.put('/users/me/password', { currentPassword, newPassword })
+        console.log('Password changed successfully')
+        return
+      } catch (err) {
+        console.error('Password change error:', err.response?.data || err.message)
+        
+        // Provide specific error messages based on response
+        const errorMessage = err.response?.data?.message || err.message
+        
+        if (err.response?.status === 400) {
+          throw new Error('Invalid password. Please check your current password and try again.')
+        } else if (err.response?.status === 401) {
+          throw new Error('Authentication required. Please log in again.')
+        } else if (errorMessage.includes('current password')) {
+          throw new Error('Current password is incorrect. Please try again.')
+        } else {
+          throw new Error('Failed to change password. Please try again.')
+        }
+      }
     }
     await new Promise(r=>setTimeout(r,400))
   }
