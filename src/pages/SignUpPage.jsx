@@ -18,7 +18,7 @@ export default function SignUpPage() {
     e.preventDefault()
 
     const n = name.trim()
-    const eTrim = email.trim()
+    const eTrim = email.trim().toLowerCase()
     const p = password.trim()
     const c = confirm.trim()
 
@@ -48,15 +48,15 @@ export default function SignUpPage() {
       setError('Password must contain at least one number')
       return
     }
-    if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(p)) {
-      setError('Password must contain at least one special character (!@#$%^&*(),.?":{}|<>)')
+    if (!/(?=.[!@#$%^&(),.?":{}|<>])/.test(p)) {
+      setError('Password must contain at least one special character')
       return
     }
 
     setError('')
     try {
       await signup(n, eTrim, p)
-      navigate('/dashboard')
+      navigate('/dashboard', { state: { newSignup: true } })
     } catch (err) {
       setError('Signup failed. Please try again.')
     }
@@ -80,7 +80,7 @@ export default function SignUpPage() {
             type="email"
             placeholder="e.g. name@example.com"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value.toLowerCase())}
           />
           <Input
             label="Password"
