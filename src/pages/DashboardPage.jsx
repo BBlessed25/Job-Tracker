@@ -43,7 +43,7 @@ export default function DashboardPage(){
             {/* 🔹 Updated: now routes to SettingsPage */}
             <Link 
               to="/settings" 
-              className="text-sm text-neutral-400 hover:text-neutral-600 underline underline-offset-2"
+              className="text-sm text-neutral-400 hover:text-neutral-600 none underline-offset-2"
             >
               Click to edit profile
             </Link>
