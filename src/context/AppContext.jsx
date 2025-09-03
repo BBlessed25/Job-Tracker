@@ -179,6 +179,15 @@ export function AppProvider({ children }){
     }catch(err){
       console.error('Failed to fetch jobs:', err)
       
+      // Some backends return 404 when a new user has no jobs yet.
+      // Treat this as an empty list rather than a hard error so the
+      // board renders with zero items instead of showing an error.
+      if (err?.response?.status === 404) {
+        console.log('No jobs found for user (404). Rendering empty board.')
+        dispatch({ type:'JOBS_SET', jobs: [] })
+        return
+      }
+      
       // Provide more specific error messages
       let errorMessage = 'Failed to load jobs'
       if (err.code === 'ERR_NETWORK') {
@@ -191,8 +200,6 @@ export function AppProvider({ children }){
         setAuth(null)
       } else if (err.response?.status === 403) {
         errorMessage = 'Access denied. Please check your permissions.'
-      } else if (err.response?.status === 404) {
-        errorMessage = 'API endpoint not found. Please check your connection.'
       } else if (err.response?.status >= 500) {
         errorMessage = 'Server error. Please try again later.'
       }

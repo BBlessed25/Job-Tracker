@@ -77,6 +77,23 @@ export default function JobBoardPage() {
     setStatus(newStatus)
   }
 
+  // Prevent duplicate active applications: same title+company where either existing
+  // or new record has a non-rejected status. Allow duplicates only if the new
+  // status is 'rejected'.
+  const hasActiveDuplicate = (titleValue, companyValue, statusValue, excludeId = null) => {
+    const normalizedTitle = (titleValue || '').trim().toLowerCase()
+    const normalizedCompany = (companyValue || '').trim().toLowerCase()
+    const targetStatus = (statusValue || 'wishlist').toLowerCase()
+    if (targetStatus === 'rejected') return false
+    const jobs = Array.isArray(state.jobs) ? state.jobs : []
+    return jobs.some(j => {
+      if (excludeId && j.id === excludeId) return false
+      const jt = (j.title || '').trim().toLowerCase()
+      const jc = (j.company || '').trim().toLowerCase()
+      return jt === normalizedTitle && jc === normalizedCompany && (j.status || '').toLowerCase() !== 'rejected'
+    })
+  }
+
   const grouped = useMemo(() => {
     console.log('Current jobs state:', state.jobs)
     // Ensure state.jobs is an array to prevent errors
@@ -191,6 +208,11 @@ export default function JobBoardPage() {
       showStatusError('Status can\'t be changed')
       return
     }
+    // Prevent duplicate active applications (same company + role)
+    if (hasActiveDuplicate(title, company, status, editing.id)) {
+      showStatusError('application exists for this company or role')
+      return
+    }
     
     console.log('Updating job:', editing.id, 'with data:', { title, company, url, salary, status, summary: notes })
     
@@ -207,6 +229,10 @@ export default function JobBoardPage() {
   const onAddJob = async (e) => {
     e.preventDefault()
     // minimal required: title, company; others optional
+    if (hasActiveDuplicate(title, company, status)) {
+      showStatusError('application exists for this company and role.')
+      return
+    }
     await addJob({
       title, company, url, salary, status, summary: notes,
       updatedAt: new Date().toISOString().slice(0,10),
@@ -358,6 +384,8 @@ export default function JobBoardPage() {
             salary={salary} setSalary={setSalary} salaryPlaceholder="e.g. $80,000 – $120,000"
             status={status} setStatus={handleStatusChange}
             notes={notes} setNotes={setNotes} notesPlaceholder="Add any notes about this job..."
+            inlineStatusError={statusError}
+            inlineStatusSuccess={statusSuccess}
             onCancel={closeCreate}
             onSubmit={onAddJob}
             submitLabel="Add Job"
