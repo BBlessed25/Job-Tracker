@@ -7,15 +7,12 @@ export default function DashboardPage(){
   const { state } = useApp()
   const location = useLocation()
   // Read the persisted just-signed-up flag for the first render after redirect
+  // Persist "Hi, <name>" greeting for the entire authenticated session after signup
+  // We intentionally do NOT clear the sessionStorage flag here; it's cleared on logout/login.
   const showWelcomeForNewSignup =
     state.justSignedUp ||
     (location.state && location.state.newSignup === true) ||
     (typeof window !== 'undefined' && sessionStorage.getItem('jt_justSignedUp') === '1')
-  useEffect(()=>{
-    if (showWelcomeForNewSignup) {
-      try { sessionStorage.removeItem('jt_justSignedUp') } catch {}
-    }
-  }, [showWelcomeForNewSignup])
   const counts = useMemo(()=> ({
     wishlist: state.jobs.filter(j=>j.status==='wishlist').length,
     applied: state.jobs.filter(j=>j.status==='applied').length,

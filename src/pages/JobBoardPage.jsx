@@ -210,7 +210,7 @@ export default function JobBoardPage() {
     }
     // Prevent duplicate active applications (same company + role)
     if (hasActiveDuplicate(title, company, status, editing.id)) {
-      showStatusError('application exists for this company or title')
+      showStatusError('application exists for this company and job title')
       return
     }
     
@@ -230,12 +230,12 @@ export default function JobBoardPage() {
     e.preventDefault()
     // minimal required: title, company; others optional
     if (hasActiveDuplicate(title, company, status)) {
-      showStatusError('application exists for this company or  title.')
+      showStatusError('application exists for this company and  job title.')
       return
     }
     await addJob({
       title, company, url, salary, status, summary: notes,
-      updatedAt: new Date().toISOString().slice(0,10),
+      updatedAt: new Date().toISOString().slice(0,10)
     })
     closeCreate()
   }

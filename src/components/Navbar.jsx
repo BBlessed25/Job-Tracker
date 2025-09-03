@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 function Brand(){
   return (
     <Link to="/" className="flex items-center gap-2 font-semibold text-neutral-900">
-      <span className="grid h-8 w-8 place-content-center rounded-lg bg-neutral-900 text-white">JT</span>
+      <span className="grid h-8 w-8 place-content-center rounded-full bg-neutral-900 text-white">JT</span>
       <span>JobTracker</span>
     </Link>
   )
@@ -41,31 +41,21 @@ export function AuthNav(){
     <nav className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Brand/>
-        <div className="flex items-center gap-6">
-          <Link
-            className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm"
-            to="/dashboard"
-          >
+        <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+          {/* Hide Dashboard on very small screens to avoid x-overflow */}
+          <Link className="hidden sm:inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm" to="/dashboard">
             <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Dashboard</motion.span>
           </Link>
-          <Link
-            className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm"
-            to="/board"
-          >
+          <Link className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm whitespace-nowrap" to="/board">
             <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Board</motion.span>
           </Link>
-          {/* Merged avatar + name pill */}
           <Link
             to="/settings"
-            className="group flex items-center gap-3 rounded-lg px-2 py-1 pl-2 text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm"
+            className="inline-flex items-center gap-2 rounded-lg px-2 py-1 pl-2 text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm min-w-0 max-w-[60vw]"
             aria-label="Open profile settings"
           >
-            <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold shadow">
-              {initials}
-            </div>
-            <span className="text-sm font-medium truncate max-w-[40vw] sm:max-w-none">
-              {name}
-            </span>
+            <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold">{initials}</div>
+            <span className="text-sm font-medium truncate">{name}</span>
           </Link>
         </div>
       </div>
