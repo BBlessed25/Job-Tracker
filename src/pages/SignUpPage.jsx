@@ -63,7 +63,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4">
+    <div className="flex min-h-[calc(100vh-64px)] items-center justify-center px-4 overflow-x-hidden">
       <div className="w-full max-w-md rounded-2xl border border-neutral-200 bg-white p-8">
         <h2 className="text-center text-lg font-semibold">Create an account</h2>
         <p className="mb-6 text-center text-sm text-neutral-500">Sign up for JobTracker</p>

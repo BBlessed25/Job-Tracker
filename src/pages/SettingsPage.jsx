@@ -145,7 +145,7 @@ export default function SettingsPage(){
   }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8">
+    <div className="mx-auto max-w-3xl px-4 py-6 sm:py-8 overflow-x-hidden">
       {/* Back link */}
       <div className="mb-4 text-sm">
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900">
