@@ -48,7 +48,7 @@ export default function SignUpPage() {
       setError('Password must contain at least one number')
       return
     }
-    if (!/(?=.*[!@#$%^&*(),.?":{}|<>])/.test(p)) {
+    if (!/(?=.[!@#$%^&(),.?":{}|<>])/.test(p)) {
       setError('Password must contain at least one special character')
       return
     }
@@ -56,7 +56,7 @@ export default function SignUpPage() {
     setError('')
     try {
       await signup(n, eTrim, p)
-      navigate('/dashboard')
+      navigate('/dashboard', { state: { newSignup: true } })
     } catch (err) {
       setError('Signup failed. Please try again.')
     }

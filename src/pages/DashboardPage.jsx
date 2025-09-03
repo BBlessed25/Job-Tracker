@@ -1,10 +1,21 @@
-import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import Button from '../components/Button.jsx'
 
 export default function DashboardPage(){
   const { state } = useApp()
+  const location = useLocation()
+  // Read the persisted just-signed-up flag for the first render after redirect
+  const showWelcomeForNewSignup =
+    state.justSignedUp ||
+    (location.state && location.state.newSignup === true) ||
+    (typeof window !== 'undefined' && sessionStorage.getItem('jt_justSignedUp') === '1')
+  useEffect(()=>{
+    if (showWelcomeForNewSignup) {
+      try { sessionStorage.removeItem('jt_justSignedUp') } catch {}
+    }
+  }, [showWelcomeForNewSignup])
   const counts = useMemo(()=> ({
     wishlist: state.jobs.filter(j=>j.status==='wishlist').length,
     applied: state.jobs.filter(j=>j.status==='applied').length,
@@ -18,7 +29,11 @@ export default function DashboardPage(){
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold">
-          Welcome back, {state.user?.fullName || 'John Doe'}! <span className="inline-block">👋</span>
+          {showWelcomeForNewSignup ? (
+            <>Hi, {state.user?.fullName || 'John Doe'} <span className="inline-block">👋</span></>
+          ) : (
+            <>Welcome back, {state.user?.fullName || 'John Doe'} <span className="inline-block">👋</span></>
+          )}
         </h1>
         <p className="text-neutral-600">Here's your job search overview</p>
       </div>

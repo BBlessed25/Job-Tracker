@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { AppProvider, useApp } from './context/AppContext.jsx'
+import { useApp } from './context/AppContext.jsx'
 import { PublicNav, AuthNav } from './components/Navbar.jsx'
 import HelpButton from './components/HelpButton.jsx'
 import StickyPrivacy from './components/StickyPrivacy.jsx'
@@ -57,9 +57,5 @@ function Shell(){
 }
 
 export default function App(){
-  return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
-  )
+  return <Shell />
 }

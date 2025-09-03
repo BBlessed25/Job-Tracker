@@ -10,12 +10,13 @@ const initialState = {
   authStatus: 'idle',
   jobsStatus: 'idle',
   error: null,
+  justSignedUp: false,
 }
 
 function reducer(state, action){
   switch(action.type){
     case 'AUTH_LOADING': return { ...state, authStatus:'loading', error:null }
-    case 'AUTH_SUCCESS': return { ...state, user:action.user, authStatus:'authenticated', error:null }
+    case 'AUTH_SUCCESS': return { ...state, user:action.user, authStatus:'authenticated', error:null, justSignedUp: !!action.justSignedUp }
     case 'AUTH_ERROR': return { ...state, authStatus:'error', error:action.error }
     case 'LOGOUT': return { ...state, user:null, authStatus:'unauthenticated' }
     case 'JOBS_LOADING': return { ...state, jobsStatus:'loading' }
@@ -91,7 +92,8 @@ export function AppProvider({ children }){
         console.log('Login successful, setting auth token:', data.token)
         setAuth(data.token)
         console.log('Auth token set, now fetching jobs...')
-        dispatch({ type:'AUTH_SUCCESS', user: data.user })
+        dispatch({ type:'AUTH_SUCCESS', user: data.user, justSignedUp: false })
+        try { sessionStorage.removeItem('jt_justSignedUp') } catch {}
         
         // Fetch jobs after successful login
         await fetchJobs()
@@ -99,7 +101,8 @@ export function AppProvider({ children }){
         await new Promise(r=>setTimeout(r,500))
         const user = { id:'1', fullName:'John Doe', email }
         mock.setUser(user)
-        dispatch({ type:'AUTH_SUCCESS', user })
+        dispatch({ type:'AUTH_SUCCESS', user, justSignedUp: false })
+        try { sessionStorage.removeItem('jt_justSignedUp') } catch {}
       }
     }catch(err){
       console.error('Login error:', err)
@@ -121,7 +124,8 @@ export function AppProvider({ children }){
         
         console.log('Signup successful, setting auth token:', data.token)
         setAuth(data.token)
-        dispatch({ type:'AUTH_SUCCESS', user: data.user })
+        dispatch({ type:'AUTH_SUCCESS', user: data.user, justSignedUp: true })
+        try { sessionStorage.setItem('jt_justSignedUp', '1') } catch {}
         
         // Fetch jobs after successful signup
         await fetchJobs()
@@ -129,7 +133,8 @@ export function AppProvider({ children }){
         await new Promise(r=>setTimeout(r,600))
         const user = { id:'1', fullName: name || 'John Doe', email }
         mock.setUser(user)
-        dispatch({ type:'AUTH_SUCCESS', user })
+        dispatch({ type:'AUTH_SUCCESS', user, justSignedUp: true })
+        try { sessionStorage.setItem('jt_justSignedUp', '1') } catch {}
       }
     }catch(err){
       console.error('Signup error:', err)
@@ -143,6 +148,7 @@ export function AppProvider({ children }){
     if (useApi) setAuth(null)
     mock.clearUser()
     dispatch({ type:'LOGOUT' })
+    try { sessionStorage.removeItem('jt_justSignedUp') } catch {}
   }
 
   const fetchJobs = async () => {
