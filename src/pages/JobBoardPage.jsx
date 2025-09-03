@@ -1,71 +1,568 @@
-import { useMemo, useState } from 'react'
+// src/pages/JobBoardPage.jsx
+import React, { useMemo, useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useApp } from '../context/AppContext.jsx'
 import Button from '../components/Button.jsx'
-import Modal from '../components/Modal.jsx'
-import JobColumn from '../components/JobColumn.jsx'
 import { Input, Textarea } from '../components/Input.jsx'
 
-const STATUS = ['wishlist','applied','interviewing','offer','rejected']
-const STATUS_LABEL = { wishlist:'Wishlist', applied:'Applied', interviewing:'Interviewing', offer:'Offer', rejected:'Rejected' }
+/** Visual spec per status (header bg, top bar, card accent, chip colors) */
+const THEME = {
+  wishlist: { title: 'WISHLIST', headerBg: 'bg-slate-200', topBar: 'bg-slate-500', accent: 'bg-slate-500', chip: 'bg-neutral-300 text-neutral-800' },
+  applied: { title: 'APPLIED', headerBg: 'bg-blue-200', topBar: 'bg-blue-600', accent: 'bg-blue-600', chip: 'bg-blue-600 text-white' },
+  interviewing: { title: 'INTERVIEWING', headerBg: 'bg-amber-200', topBar: 'bg-amber-500', accent: 'bg-amber-500', chip: 'bg-amber-500 text-white' },
+  offer: { title: 'OFFER', headerBg: 'bg-emerald-200', topBar: 'bg-emerald-600', accent: 'bg-emerald-600', chip: 'bg-emerald-600 text-white' },
+  rejected: { title: 'REJECTED', headerBg: 'bg-rose-200', topBar: 'bg-rose-500', accent: 'bg-rose-500', chip: 'bg-rose-600 text-white' },
+}
 
-export default function JobBoardPage(){
-  const { state, addJob, updateJob, deleteJob } = useApp()
-  const [open, setOpen] = useState(false)
-  const [editing, setEditing] = useState(null)
+const STATUSES = ['wishlist','applied','interviewing','offer','rejected']
 
-  const grouped = useMemo(()=> STATUS.reduce((acc, s)=> ({...acc, [s]: state.jobs.filter(j=>j.status===s)}), {}), [state.jobs])
+const STATUS_RULES = {
+  'wishlist': ['applied', 'rejected'],
+  'applied': ['interviewing', 'rejected'], 
+  'interviewing': ['offer', 'rejected'],
+  'offer': ['rejected'],
+  'rejected': ['wishlist', 'applied']
+}
 
-  function handleDrop(id, to){
-    if (to === '_DELETE_') return deleteJob(id)
-    const job = state.jobs.find(j=>j.id===id)
-    if (job && job.status !== to) updateJob(id, { status: to })
-    if (job && job.status === to) setEditing(job)
+export default function JobBoardPage() {
+  const { state, updateJob, deleteJob, addJob, fetchJobs } = useApp() // ⬅️ uses addJob from context
+  
+  // Status validation error and success state
+  const [statusError, setStatusError] = useState('')
+  const [statusSuccess, setStatusSuccess] = useState('')
+
+  // Function to validate status change
+  const validateStatusChange = (currentStatus, newStatus) => {
+    const allowedTransitions = STATUS_RULES[currentStatus] || []
+    return allowedTransitions.includes(newStatus)
   }
 
+  // Function to show status error
+  const showStatusError = (message) => {
+    setStatusError(message)
+    setStatusSuccess('') // Clear any success message
+    setTimeout(() => setStatusError(''), 3000) // Clear error after 3 seconds
+  }
+
+  // Function to show status success
+  const showStatusSuccess = (message) => {
+    setStatusSuccess(message)
+    setStatusError('') // Clear any error message
+    setTimeout(() => setStatusSuccess(''), 3000) // Clear success after 3 seconds
+  }
+
+  // Custom status change handler with validation
+  const handleStatusChange = (newStatus) => {
+    if (editing) {
+      // For edit mode, validate against current job status
+      const currentStatus = editing.status
+      if (currentStatus !== newStatus) {
+        if (validateStatusChange(currentStatus, newStatus)) {
+          showStatusSuccess('Status successfully updated')
+        } else {
+          showStatusError('Status can\'t be changed')
+          return
+        }
+      }
+    }
+    setStatus(newStatus)
+  }
+
+  const grouped = useMemo(() => {
+    console.log('Current jobs state:', state.jobs)
+    // Ensure state.jobs is an array to prevent errors
+    const jobs = Array.isArray(state.jobs) ? state.jobs : []
+    const groupedJobs = {
+      wishlist: jobs.filter(j=>j.status==='wishlist'),
+      applied: jobs.filter(j=>j.status==='applied'),
+      interviewing: jobs.filter(j=>j.status==='interviewing'),
+      offer: jobs.filter(j=>j.status==='offer'),
+      rejected: jobs.filter(j=>j.status==='rejected'),
+    }
+    console.log('Grouped jobs:', groupedJobs)
+    return groupedJobs
+  }, [state.jobs])
+
+  const handleDrop = (e, targetStatus) => {
+    e.preventDefault()
+    const id = e.dataTransfer.getData('text/plain')
+    if (id) {
+      // Find the job to get its current status
+      const job = state.jobs.find(j => j.id === id)
+      if (job) {
+        const currentStatus = job.status
+        console.log('Dropping job:', id, 'from', currentStatus, 'to status:', targetStatus)
+        
+        // Validate the status change
+        if (validateStatusChange(currentStatus, targetStatus)) {
+          updateJob(id, { status: targetStatus })
+          showStatusSuccess('Status successfully updated')
+        } else {
+          showStatusError('Status can\'t be changed')
+        }
+      }
+    }
+  }
+
+  // -------- Edit Modal State --------
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+
+  // -------- Create Modal State --------
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+
+  // -------- Delete Modal State --------
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [deletingJob, setDeletingJob] = useState(null)
+
+  // shared form fields (we reuse for edit/create)
+  const [title, setTitle] = useState('')
+  const [company, setCompany] = useState('')
+  const [url, setUrl] = useState('')
+  const [salary, setSalary] = useState('')
+  const [status, setStatus] = useState('wishlist')
+  const [notes, setNotes] = useState('')
+
+  // open edit with existing values
+  const openEdit = (job) => {
+    setEditing(job)
+    setTitle(job.title || '')
+    setCompany(job.company || '')
+    setUrl(job.url || '')
+    setSalary(job.salary || '')
+    setStatus(job.status || 'wishlist')
+    setNotes(job.summary || '')
+    setIsEditOpen(true)
+  }
+  const closeEdit = () => { setIsEditOpen(false); setEditing(null) }
+
+  // open create with placeholders
+  const openCreate = () => {
+    setEditing(null)
+    setTitle('')
+    setCompany('')
+    setUrl('')
+    setSalary('')
+    setStatus('wishlist')
+    setNotes('')
+    setIsCreateOpen(true)
+  }
+  const closeCreate = () => setIsCreateOpen(false)
+
+  // Delete confirmation functions
+  const openDelete = (job) => {
+    setDeletingJob(job)
+    setIsDeleteOpen(true)
+  }
+  const closeDelete = () => { setIsDeleteOpen(false); setDeletingJob(null) }
+
+  const onUpdateJob = async (e) => {
+    e.preventDefault()
+    if (!editing) return
+    
+    // Validate status change if status is being changed
+    const currentStatus = editing.status
+    if (currentStatus !== status && !validateStatusChange(currentStatus, status)) {
+      showStatusError('Status can\'t be changed')
+      return
+    }
+    
+    console.log('Updating job:', editing.id, 'with data:', { title, company, url, salary, status, summary: notes })
+    
+    try {
+      await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
+      console.log('Job updated successfully')
+      showStatusSuccess('Status successfully updated')
+      closeEdit()
+    } catch (error) {
+      console.error('Failed to update job:', error)
+    }
+  }
+
+  const onAddJob = async (e) => {
+    e.preventDefault()
+    // minimal required: title, company; others optional
+    await addJob({
+      title, company, url, salary, status, summary: notes,
+      updatedAt: new Date().toISOString().slice(0,10),
+    })
+    closeCreate()
+  }
+
+  const onDeleteJob = async () => {
+    if (!deletingJob) return
+    
+    try {
+      console.log('Deleting job:', deletingJob.id)
+      await deleteJob(deletingJob.id)
+      console.log('Job deleted successfully')
+      closeDelete()
+    } catch (error) {
+      console.error('Failed to delete job:', error)
+    }
+  }
+
+  // Fetch jobs when component mounts and user is authenticated
+  useEffect(() => {
+    if (state.user && state.authStatus === 'authenticated') {
+      fetchJobs()
+    }
+  }, [state.user, state.authStatus]) // Only fetch when user authentication changes
+
+  // close modals on ESC
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        if (isEditOpen) closeEdit()
+        if (isCreateOpen) closeCreate()
+        if (isDeleteOpen) closeDelete()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isEditOpen, isCreateOpen, isDeleteOpen])
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Job Board</h1>
-        <Button onClick={()=>{ setEditing(null); setOpen(true) }}>+ Add Job</Button>
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+      {/* Header */}
+      <div className="mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Job Board</h1>
+          <p className="text-neutral-500">Track and manage your job applications</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="inline-flex items-center gap-2 rounded-2xl bg-neutral-900 px-4 py-2 text-white hover:bg-neutral-800"
+        >
+          <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">＋</span>
+          Add Job
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {STATUS.map((s)=> (
-          <JobColumn key={s} status={s} jobs={grouped[s]} onDropJob={handleDrop}/>
-        ))}
+      {/* Status Error Display */}
+      {statusError && (
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center">
+          <div className="text-sm font-medium text-rose-800">{statusError}</div>
+        </div>
+      )}
+
+      {/* Status Success Display */}
+      {statusSuccess && (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+          <div className="text-sm font-medium text-emerald-800">{statusSuccess}</div>
+        </div>
+      )}
+
+      {/* Not Authenticated State */}
+      {state.authStatus !== 'authenticated' && (
+        <div className="mb-6 rounded-2xl border border-blue-200 bg-blue-50 p-8 text-center">
+          <div className="text-lg font-semibold text-blue-900">Please Log In</div>
+          <div className="text-sm text-blue-700 mt-2">You need to be logged in to view and manage your jobs</div>
+          <Link to="/login" className="mt-3 inline-block rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            Go to Login
+          </Link>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {state.authStatus === 'authenticated' && state.jobsStatus === 'loading' && (
+        <div className="mb-6 rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+          <div className="text-lg font-semibold text-neutral-900">Loading jobs...</div>
+          <div className="text-sm text-neutral-500">Please wait while we fetch your job applications</div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {state.authStatus === 'authenticated' && state.error && (
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-6">
+          <div className="text-lg font-semibold text-rose-900">Error Loading Jobs</div>
+          <div className="text-sm text-rose-700 mt-2">{state.error}</div>
+          <button 
+            onClick={() => fetchJobs()} 
+            className="mt-3 rounded-lg bg-rose-600 px-4 py-2 text-white hover:bg-rose-700"
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Two-column layout */}
+      {state.jobsStatus !== 'loading' && !state.error && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {STATUSES.map((key) => (
+            <Column
+              key={key}
+              title={THEME[key].title}
+              count={grouped[key].length}
+              theme={THEME[key]}
+              onDrop={(e) => handleDrop(e, key)}
+            >
+              {grouped[key].length === 0 ? (
+                <EmptyState />
+              ) : (
+                <div className="space-y-4">
+                  {grouped[key].map(job => (
+                                      <JobCard
+                    key={job.id}
+                    job={job}
+                    theme={THEME[job.status] || THEME.wishlist}
+                    onEdit={() => openEdit(job)}
+                    onDelete={() => openDelete(job)}
+                  />
+                  ))}
+                </div>
+              )}
+            </Column>
+          ))}
+        </div>
+      )}
+
+      {/* Footer Tip */}
+      <div className="mt-8 rounded-2xl bg-neutral-100 px-4 py-3 text-center text-neutral-600">
+        💡 Tip: Click on job cards to edit them. Use the status dropdown to move jobs between columns.
       </div>
 
-      <JobModal open={open} onClose={()=>setOpen(false)} onSave={async (data)=>{ await addJob(data); setOpen(false) }}/>
-      {editing && (
-        <JobModal open={!!editing} initial={editing} onClose={()=>setEditing(null)} onSave={async (data)=>{ await updateJob(editing.id, data); setEditing(null) }}/>
+      {/* ---------- Edit Modal ---------- */}
+      {isEditOpen && (
+        <Modal onClose={closeEdit}>
+          <Header title="Edit Job" subtitle="Update the job details below." onClose={closeEdit} />
+          <JobForm
+            mode="edit"
+            title={title} setTitle={setTitle}
+            company={company} setCompany={setCompany}
+            url={url} setUrl={setUrl}
+            salary={salary} setSalary={setSalary}
+            status={status} setStatus={handleStatusChange}
+            notes={notes} setNotes={setNotes}
+            onCancel={closeEdit}
+            onSubmit={onUpdateJob}
+          />
+        </Modal>
+      )}
+
+      {/* ---------- Create Modal ---------- */}
+      {isCreateOpen && (
+        <Modal onClose={closeCreate}>
+          <Header title="Add New Job" subtitle="Fill in the details for your new job application." onClose={closeCreate} />
+          <JobForm
+            mode="create"
+            title={title} setTitle={setTitle} titlePlaceholder="e.g. Frontend Developer"
+            company={company} setCompany={setCompany} companyPlaceholder="e.g. Tech Corp"
+            url={url} setUrl={setUrl} urlPlaceholder="https://company.com/job-posting"
+            salary={salary} setSalary={setSalary} salaryPlaceholder="e.g. $80,000 – $120,000"
+            status={status} setStatus={handleStatusChange}
+            notes={notes} setNotes={setNotes} notesPlaceholder="Add any notes about this job..."
+            onCancel={closeCreate}
+            onSubmit={onAddJob}
+            submitLabel="Add Job"
+          />
+        </Modal>
+      )}
+
+      {/* ---------- Delete Confirmation Modal ---------- */}
+      {isDeleteOpen && deletingJob && (
+        <Modal onClose={closeDelete}>
+          <div className="px-6 pt-5 pb-6">
+            <div className="text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-100">
+                <svg className="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-neutral-900">Delete Job</h3>
+              <div className="mt-2 text-sm text-neutral-500">
+                Are you sure you want to delete <strong>"{deletingJob.title}"</strong> at <strong>"{deletingJob.company}"</strong>?
+              </div>
+              <div className="mt-4 text-xs text-neutral-400">
+                This action cannot be undone.
+              </div>
+            </div>
+            <div className="mt-6 flex justify-center gap-3">
+              <button
+                type="button"
+                onClick={closeDelete}
+                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={onDeleteJob}
+                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
+              >
+                Delete Job
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   )
 }
 
-function JobModal({ open, onClose, onSave, initial }){
-  const [form, setForm] = useState(initial || { status:'wishlist' })
-  const isEdit = Boolean(initial)
+/* ===================== UI Bits ===================== */
+
+function Column({ title, count, theme, onDrop, children }) {
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? 'Edit Job' : 'Add New Job'}>
-      <div className="space-y-4">
-        <Input label="Job Title *" placeholder="e.g. Frontend Developer" value={form.title || ''} onChange={(e)=> setForm({ ...form, title:e.target.value })} />
-        <Input label="Company *" placeholder="e.g. Tech Corp" value={form.company || ''} onChange={(e)=> setForm({ ...form, company:e.target.value })} />
-        <Input label="Job Link" placeholder="https://company.com/job-posting" value={form.link || ''} onChange={(e)=> setForm({ ...form, link:e.target.value })} />
-        <Input label="Salary" placeholder="e.g. $80,000 - $120,000" value={form.salary || ''} onChange={(e)=> setForm({ ...form, salary:e.target.value })} />
+    <section
+      className="rounded-2xl border border-neutral-200 bg-white shadow-sm"
+      onDragOver={(e)=> e.preventDefault()}
+      onDrop={onDrop}
+    >
+      <div className={`h-2 rounded-t-2xl ${theme.topBar}`} />
+      <div className={`flex items-center justify-between px-4 py-3 ${theme.headerBg}`}>
+        <div className="text-sm font-semibold tracking-wider text-neutral-900">{title}</div>
+        <span className="rounded-lg bg-white/70 px-2 py-1 text-xs font-semibold text-neutral-700">{count}</span>
+      </div>
+      <div className="p-4">
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function EmptyState() {
+  return (
+    <div className="grid h-[360px] place-content-center rounded-2xl border border-neutral-200 bg-white text-neutral-400">
+      No jobs yet
+    </div>
+  )
+}
+
+function JobCard({ job, theme, onEdit, onDelete }) {
+  return (
+    <div
+      className="relative rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+      draggable
+      onDragStart={(e)=> e.dataTransfer.setData('text/plain', job.id)}
+    >
+      <span className={`absolute left-0 top-3 bottom-3 w-1.5 rounded-full ${theme.accent}`} aria-hidden />
+
+      {/* icon buttons */}
+      <div className="absolute right-4 top-4 flex items-center gap-3 text-neutral-500">
+        {job.url && (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open link"
+            className="rounded-md p-1 hover:text-neutral-800 hover:bg-neutral-100"
+            onClick={(e)=> e.stopPropagation()}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 3h6v6" /><path d="M10 14 21 3" /><path d="M21 14v7H3V3h7" />
+            </svg>
+          </a>
+        )}
+        <button aria-label="Edit job" onClick={(e)=> { e.stopPropagation(); onEdit(); }} className="rounded-md p-1 hover:text-neutral-800 hover:bg-neutral-100">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+          </svg>
+        </button>
+        <button aria-label="Delete job" onClick={(e)=> { e.stopPropagation(); onDelete(); }} className="rounded-md p-1 hover:text-rose-700 hover:bg-rose-50">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+            <path d="M10 11v6M14 11v6" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
+      </div>
+
+      <div className="ml-3">
+        <div className="mb-1 text-[15px] font-semibold text-neutral-900">{job.title}</div>
+        <div className="text-sm text-neutral-600">{job.company}</div>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${theme.chip}`}>
+            {job.status.charAt(0).toUpperCase()+job.status.slice(1)}
+          </span>
+          {job.salary && (
+            <span className="inline-flex items-center rounded-full border border-neutral-200 bg-neutral-100 px-2.5 py-1 text-xs font-medium text-neutral-800">
+              {job.salary}
+            </span>
+          )}
+        </div>
+
+        {job.summary && <p className="mt-3 text-sm text-neutral-600">{job.summary}</p>}
+
+        <div className="mt-4 border-t pt-2 text-sm text-neutral-400">
+          Updated {job.updatedAt || '2024-01-09'}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ---------- Modal + Form components ---------- */
+
+function Modal({ onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 grid place-items-center px-4">
+        <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Header({ title, subtitle, onClose }) {
+  return (
+    <div className="flex items-start justify-between px-6 pt-5">
+      <div>
+        <h2 className="text-xl font-semibold">{title}</h2>
+        <p className="text-sm text-neutral-500">{subtitle}</p>
+      </div>
+      <button aria-label="Close" onClick={onClose} className="rounded-lg p-1 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-800">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M18 6 6 18M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
+function JobForm({
+  mode = 'edit',
+  title, setTitle, titlePlaceholder = '',
+  company, setCompany, companyPlaceholder = '',
+  url, setUrl, urlPlaceholder = '',
+  salary, setSalary, salaryPlaceholder = '',
+  status, setStatus,
+  notes, setNotes, notesPlaceholder = '',
+  onCancel, onSubmit, submitLabel,
+}) {
+  return (
+    <form onSubmit={onSubmit} className="px-6 pb-6 pt-2 space-y-4">
+      <div className="grid grid-cols-1 gap-4">
+        <Input label="Job Title *" value={title} onChange={(e)=> setTitle(e.target.value)} placeholder={titlePlaceholder} />
+        <Input label="Company *" value={company} onChange={(e)=> setCompany(e.target.value)} placeholder={companyPlaceholder} className="bg-neutral-100" />
+        <Input label="Job Link" type="url" value={url} onChange={(e)=> setUrl(e.target.value)} placeholder={urlPlaceholder} />
+        <Input label="Salary" value={salary} onChange={(e)=> setSalary(e.target.value)} placeholder={salaryPlaceholder} className="bg-neutral-100" />
+
         <label className="block">
           <div className="mb-1.5 text-sm font-medium text-neutral-700">Status</div>
-          <select className="w-full rounded-xl border border-neutral-300 bg-neutral-50 px-3.5 py-2.5 focus:outline-none focus:ring-2 focus:ring-neutral-900"
-            value={form.status} onChange={(e)=> setForm({ ...form, status:e.target.value })}>
-            {STATUS.map((s)=> <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+          <select
+            className="w-full rounded-xl border border-neutral-300 bg-white px-3 py-2 outline-none focus:ring-2 focus:ring-neutral-900"
+            value={status}
+            onChange={(e)=> setStatus(e.target.value)}
+          >
+            {STATUSES.map(s => <option key={s} value={s}>{s[0].toUpperCase()+s.slice(1)}</option>)}
           </select>
         </label>
-        <Textarea label="Notes" placeholder="Add any notes about this job..." value={form.notes || ''} onChange={(e)=> setForm({ ...form, notes:e.target.value })} />
+
+        <Textarea label="Notes" value={notes} onChange={(e)=> setNotes(e.target.value)} placeholder={notesPlaceholder} />
       </div>
-      <div className="mt-6 flex justify-end gap-3">
-        <Button variant="secondary" onClick={onClose}>Cancel</Button>
-        <Button onClick={()=> onSave(form)}>{isEdit ? 'Save Changes' : 'Add Job'}</Button>
+
+      <div className="mt-2 flex items-center justify-end gap-3">
+        <button type="button" onClick={onCancel} className="rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-neutral-800 hover:bg-neutral-50">
+          Cancel
+        </button>
+        <Button type="submit" className="px-4 py-2">
+          {submitLabel || (mode === 'edit' ? 'Update Job' : 'Add Job')}
+        </Button>
       </div>
-    </Modal>
+    </form>
   )
 }
