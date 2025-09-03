@@ -6,27 +6,8 @@ import { motion } from 'framer-motion'
 function Brand(){
   return (
     <Link to="/" className="flex items-center gap-2 font-semibold text-neutral-900">
-      <span className="grid h-8 w-8 place-content-center rounded-full bg-neutral-900 text-white">JT</span>
+      <span className="grid h-8 w-8 place-content-center rounded-lg bg-neutral-900 text-white">JT</span>
       <span>JobTracker</span>
-    </Link>
-  )
-}
-
-/** Reusable nav item with a “pill” that shows on hover (not route-active). */
-function NavItem({ to, children }){
-  return (
-    <Link
-      to={to}
-      className={[
-        "text-sm font-medium rounded-lg px-3 py-2 transition-colors",
-        "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
-        // Prevent nav from causing horizontal overflow on small screens
-        "whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
-      ].join(" ")}
-    >
-      <motion.span whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }}>
-        {children}
-      </motion.span>
     </Link>
   )
 }
@@ -57,21 +38,35 @@ export function AuthNav(){
   const initials = (name.split(' ').map(p=>p[0]).slice(0,2).join('') || 'J').slice(0,1)
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur overflow-x-hidden">
+    <nav className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Brand/>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          <NavItem to="/dashboard">Dashboard</NavItem>
-          <NavItem to="/board">Board</NavItem>
-          {/* Avatar + Name pill (hover highlight) */}
-          <div className="flex items-center gap-2 sm:gap-3 pl-2 min-w-0 max-w-[60vw]">
-            <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold">
+        <div className="flex items-center gap-6">
+          <Link
+            className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm"
+            to="/dashboard"
+          >
+            <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Dashboard</motion.span>
+          </Link>
+          <Link
+            className="inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm"
+            to="/board"
+          >
+            <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Board</motion.span>
+          </Link>
+          {/* Merged avatar + name pill */}
+          <Link
+            to="/settings"
+            className="group flex items-center gap-3 rounded-lg px-2 py-1 pl-2 text-neutral-900 transition-colors hover:bg-neutral-200 hover:shadow-sm"
+            aria-label="Open profile settings"
+          >
+            <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold shadow">
               {initials}
             </div>
-            <div className="min-w-0 max-w-full">
-              <NavItem to="/settings">{name}</NavItem>
-            </div>
-          </div>
+            <span className="text-sm font-medium truncate max-w-[40vw] sm:max-w-none">
+              {name}
+            </span>
+          </Link>
         </div>
       </div>
     </nav>
