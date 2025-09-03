@@ -27,9 +27,10 @@ const STATUS_RULES = {
 export default function JobBoardPage() {
   const { state, updateJob, deleteJob, addJob, fetchJobs } = useApp() // ⬅️ uses addJob from context
   
-  // Status validation error and success state
+  // Status validation messages
   const [statusError, setStatusError] = useState('')
   const [statusSuccess, setStatusSuccess] = useState('')
+  const [cardStatusPrompt, setCardStatusPrompt] = useState({ jobId: null, type: null, message: '' })
 
   // Function to validate status change
   const validateStatusChange = (currentStatus, newStatus) => {
@@ -37,18 +38,26 @@ export default function JobBoardPage() {
     return allowedTransitions.includes(newStatus)
   }
 
-  // Function to show status error
-  const showStatusError = (message) => {
+  // Function to show status error (optionally for a specific job card)
+  const showStatusError = (message, jobId) => {
     setStatusError(message)
-    setStatusSuccess('') // Clear any success message
-    setTimeout(() => setStatusError(''), 3000) // Clear error after 3 seconds
+    setStatusSuccess('')
+    if (jobId) {
+      setCardStatusPrompt({ jobId, type: 'error', message })
+      setTimeout(() => setCardStatusPrompt({ jobId: null, type: null, message: '' }), 3000)
+    }
+    setTimeout(() => setStatusError(''), 3000)
   }
 
-  // Function to show status success
-  const showStatusSuccess = (message) => {
+  // Function to show status success (optionally for a specific job card)
+  const showStatusSuccess = (message, jobId) => {
     setStatusSuccess(message)
-    setStatusError('') // Clear any error message
-    setTimeout(() => setStatusSuccess(''), 3000) // Clear success after 3 seconds
+    setStatusError('')
+    if (jobId) {
+      setCardStatusPrompt({ jobId, type: 'success', message })
+      setTimeout(() => setCardStatusPrompt({ jobId: null, type: null, message: '' }), 3000)
+    }
+    setTimeout(() => setStatusSuccess(''), 3000)
   }
 
   // Custom status change handler with validation
@@ -96,9 +105,9 @@ export default function JobBoardPage() {
         // Validate the status change
         if (validateStatusChange(currentStatus, targetStatus)) {
           updateJob(id, { status: targetStatus })
-          showStatusSuccess('Status successfully updated')
+          showStatusSuccess('Status successfully updated', id)
         } else {
-          showStatusError('Status can\'t be changed')
+          showStatusError('Status can\'t be changed', id)
         }
       }
     }
@@ -111,9 +120,8 @@ export default function JobBoardPage() {
   // -------- Create Modal State --------
   const [isCreateOpen, setIsCreateOpen] = useState(false)
 
-  // -------- Delete Modal State --------
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-  const [deletingJob, setDeletingJob] = useState(null)
+  // -------- Delete Confirmation (inline) --------
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null)
 
   // shared form fields (we reuse for edit/create)
   const [title, setTitle] = useState('')
@@ -149,12 +157,29 @@ export default function JobBoardPage() {
   }
   const closeCreate = () => setIsCreateOpen(false)
 
-  // Delete confirmation functions
-  const openDelete = (job) => {
-    setDeletingJob(job)
-    setIsDeleteOpen(true)
+  // Inline delete confirmation handler
+  const handleDeleteClick = async (job) => {
+    if (confirmDeleteId === job.id) {
+      try {
+        console.log('Deleting job:', job.id)
+        await deleteJob(job.id)
+        console.log('Job deleted successfully')
+      } catch (error) {
+        console.error('Failed to delete job:', error)
+      } finally {
+        setConfirmDeleteId(null)
+      }
+    } else {
+      setConfirmDeleteId(job.id)
+    }
   }
-  const closeDelete = () => { setIsDeleteOpen(false); setDeletingJob(null) }
+
+  // Auto-dismiss delete confirmation prompt after 1.5s
+  useEffect(() => {
+    if (!confirmDeleteId) return
+    const timerId = setTimeout(() => setConfirmDeleteId(null), 1500)
+    return () => clearTimeout(timerId)
+  }, [confirmDeleteId])
 
   const onUpdateJob = async (e) => {
     e.preventDefault()
@@ -172,7 +197,7 @@ export default function JobBoardPage() {
     try {
       await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
       console.log('Job updated successfully')
-      showStatusSuccess('Status successfully updated')
+      showStatusSuccess('Status successfully updated', editing.id)
       closeEdit()
     } catch (error) {
       console.error('Failed to update job:', error)
@@ -189,18 +214,7 @@ export default function JobBoardPage() {
     closeCreate()
   }
 
-  const onDeleteJob = async () => {
-    if (!deletingJob) return
-    
-    try {
-      console.log('Deleting job:', deletingJob.id)
-      await deleteJob(deletingJob.id)
-      console.log('Job deleted successfully')
-      closeDelete()
-    } catch (error) {
-      console.error('Failed to delete job:', error)
-    }
-  }
+  // (Modal-based delete removed in favor of inline confirmation)
 
   // Fetch jobs when component mounts and user is authenticated
   useEffect(() => {
@@ -215,12 +229,12 @@ export default function JobBoardPage() {
       if (e.key === 'Escape') {
         if (isEditOpen) closeEdit()
         if (isCreateOpen) closeCreate()
-        if (isDeleteOpen) closeDelete()
+        if (confirmDeleteId) setConfirmDeleteId(null)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [isEditOpen, isCreateOpen, isDeleteOpen])
+  }, [isEditOpen, isCreateOpen, confirmDeleteId])
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
@@ -239,19 +253,7 @@ export default function JobBoardPage() {
         </button>
       </div>
 
-      {/* Status Error Display */}
-      {statusError && (
-        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center">
-          <div className="text-sm font-medium text-rose-800">{statusError}</div>
-        </div>
-      )}
-
-      {/* Status Success Display */}
-      {statusSuccess && (
-        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-          <div className="text-sm font-medium text-emerald-800">{statusSuccess}</div>
-        </div>
-      )}
+      {/* Top-page status alerts removed in favor of inline prompts on cards and in modal */}
 
       {/* Not Authenticated State */}
       {state.authStatus !== 'authenticated' && (
@@ -307,7 +309,9 @@ export default function JobBoardPage() {
                     job={job}
                     theme={THEME[job.status] || THEME.wishlist}
                     onEdit={() => openEdit(job)}
-                    onDelete={() => openDelete(job)}
+                    onDelete={() => handleDeleteClick(job)}
+                    showDeletePrompt={confirmDeleteId === job.id}
+                    statusPrompt={cardStatusPrompt.jobId === job.id ? cardStatusPrompt : null}
                   />
                   ))}
                 </div>
@@ -334,6 +338,8 @@ export default function JobBoardPage() {
             salary={salary} setSalary={setSalary}
             status={status} setStatus={handleStatusChange}
             notes={notes} setNotes={setNotes}
+            inlineStatusError={statusError}
+            inlineStatusSuccess={statusSuccess}
             onCancel={closeEdit}
             onSubmit={onUpdateJob}
           />
@@ -359,43 +365,7 @@ export default function JobBoardPage() {
         </Modal>
       )}
 
-      {/* ---------- Delete Confirmation Modal ---------- */}
-      {isDeleteOpen && deletingJob && (
-        <Modal onClose={closeDelete}>
-          <div className="px-6 pt-5 pb-6">
-            <div className="text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-rose-100">
-                <svg className="h-6 w-6 text-rose-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-medium text-neutral-900">Delete Job</h3>
-              <div className="mt-2 text-sm text-neutral-500">
-                Are you sure you want to delete <strong>"{deletingJob.title}"</strong> at <strong>"{deletingJob.company}"</strong>?
-              </div>
-              <div className="mt-4 text-xs text-neutral-400">
-                This action cannot be undone.
-              </div>
-            </div>
-            <div className="mt-6 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={closeDelete}
-                className="rounded-lg border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={onDeleteJob}
-                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700"
-              >
-                Delete Job
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
+      {/* Inline delete confirmation handled within JobCard */}
     </div>
   )
 }
@@ -429,7 +399,7 @@ function EmptyState() {
   )
 }
 
-function JobCard({ job, theme, onEdit, onDelete }) {
+function JobCard({ job, theme, onEdit, onDelete, showDeletePrompt, statusPrompt }) {
   return (
     <div
       className="relative rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
@@ -484,8 +454,18 @@ function JobCard({ job, theme, onEdit, onDelete }) {
 
         {job.summary && <p className="mt-3 text-sm text-neutral-600">{job.summary}</p>}
 
-        <div className="mt-4 border-t pt-2 text-sm text-neutral-400">
-          Updated {job.updatedAt || '2024-01-09'}
+        <div className="mt-4 border-t pt-2 text-sm text-neutral-400 flex items-center justify-between">
+          <span>Updated {job.updatedAt || '2024-01-09'}</span>
+          <span className="flex items-center gap-3">
+            {statusPrompt && (
+              <span className={statusPrompt.type === 'error' ? 'font-medium text-rose-600' : 'font-medium text-emerald-700'}>
+                {statusPrompt.message}
+              </span>
+            )}
+            {showDeletePrompt && (
+              <span className="font-medium text-rose-600">confirm again to delete</span>
+            )}
+          </span>
         </div>
       </div>
     </div>
@@ -531,6 +511,8 @@ function JobForm({
   salary, setSalary, salaryPlaceholder = '',
   status, setStatus,
   notes, setNotes, notesPlaceholder = '',
+  inlineStatusError,
+  inlineStatusSuccess,
   onCancel, onSubmit, submitLabel,
 }) {
   return (
@@ -555,13 +537,23 @@ function JobForm({
         <Textarea label="Notes" value={notes} onChange={(e)=> setNotes(e.target.value)} placeholder={notesPlaceholder} />
       </div>
 
-      <div className="mt-2 flex items-center justify-end gap-3">
-        <button type="button" onClick={onCancel} className="rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-neutral-800 hover:bg-neutral-50">
-          Cancel
-        </button>
-        <Button type="submit" className="px-4 py-2">
-          {submitLabel || (mode === 'edit' ? 'Update Job' : 'Add Job')}
-        </Button>
+      <div className="mt-2 flex items-center justify-between gap-3">
+        <div className="text-sm">
+          {inlineStatusError && (
+            <span className="font-medium text-rose-600">{inlineStatusError}</span>
+          )}
+          {!inlineStatusError && inlineStatusSuccess && (
+            <span className="font-medium text-emerald-700">{inlineStatusSuccess}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button type="button" onClick={onCancel} className="rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-neutral-800 hover:bg-neutral-50">
+            Cancel
+          </button>
+          <Button type="submit" className="px-4 py-2">
+            {submitLabel || (mode === 'edit' ? 'Update Job' : 'Add Job')}
+          </Button>
+        </div>
       </div>
     </form>
   )

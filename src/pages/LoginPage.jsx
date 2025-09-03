@@ -14,7 +14,7 @@ export default function LoginPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault()
-    const eTrim = email.trim()
+    const eTrim = email.trim().toLowerCase()
     const pTrim = password.trim()
 
     if (!eTrim || !pTrim) {
@@ -53,7 +53,7 @@ export default function LoginPage() {
             type="email"
             placeholder="Enter your email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => setEmail(e.target.value.toLowerCase())}
           />
           <Input
             label="Password"
