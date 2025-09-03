@@ -208,6 +208,30 @@ export default function JobBoardPage() {
       showStatusError('Status can\'t be changed')
       return
     }
+    // If nothing changed, show inline prompt and do nothing
+    const origTitle = (editing.title || '').trim()
+    const origCompany = (editing.company || '').trim()
+    const origUrl = (editing.url || '').trim()
+    const origSalary = (editing.salary || '').trim()
+    const origStatus = (editing.status || 'wishlist').trim()
+    const origNotes = (editing.summary || '').trim()
+    const newTitle = (title || '').trim()
+    const newCompany = (company || '').trim()
+    const newUrl = (url || '').trim()
+    const newSalary = (salary || '').trim()
+    const newStatus = (status || 'wishlist').trim()
+    const newNotes = (notes || '').trim()
+    const noChanges =
+      origTitle === newTitle &&
+      origCompany === newCompany &&
+      origUrl === newUrl &&
+      origSalary === newSalary &&
+      origStatus === newStatus &&
+      origNotes === newNotes
+    if (noChanges) {
+      showStatusError('no new changes were made')
+      return
+    }
     // Prevent duplicate active applications (same company + role)
     if (hasActiveDuplicate(title, company, status, editing.id)) {
       showStatusError('application exists for this company and job title')
@@ -228,6 +252,13 @@ export default function JobBoardPage() {
 
   const onAddJob = async (e) => {
     e.preventDefault()
+    // Require title and company; show inline error if missing
+    const t = (title || '').trim()
+    const c = (company || '').trim()
+    if (!t || !c) {
+      showStatusError('Job title and company required')
+      return
+    }
     // minimal required: title, company; others optional
     if (hasActiveDuplicate(title, company, status)) {
       showStatusError('application exists for this company and  job title.')

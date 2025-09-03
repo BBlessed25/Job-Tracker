@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 function Brand(){
   return (
     <Link to="/" className="flex items-center gap-2 font-semibold text-neutral-900">
-      <span className="grid h-8 w-8 place-content-center rounded-full bg-neutral-900 text-white">JT</span>
+      <span className="grid h-8 w-8 place-content-center rounded-lg bg-neutral-900 text-white">JT</span>
       <span>JobTracker</span>
     </Link>
   )
