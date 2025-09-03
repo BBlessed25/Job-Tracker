@@ -18,7 +18,7 @@ function Row({ label, value }){
 export default function SettingsPage(){
   const { state, updateProfile, changePassword, logout, fetchUserProfile } = useApp()
   const [fullName, setFullName] = useState(state.user?.fullName || 'John Doe')
-  const [email, setEmail] = useState(state.user?.email || 'JOHN@GMAIL.COM')
+  const [email, setEmail] = useState((state.user?.email || 'john@gmail.com').toLowerCase())
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmNewPassword, setConfirmNewPassword] = useState('')
@@ -36,7 +36,7 @@ export default function SettingsPage(){
         try {
           const userData = await fetchUserProfile()
           setFullName(userData?.fullName || 'John Doe')
-          setEmail((userData?.email || 'john@gmail.com').toUpperCase())
+          setEmail((userData?.email || 'john@gmail.com').toLowerCase())
         } catch (error) {
           console.error('Failed to load user profile:', error)
           setNotice({ type: 'error', text: 'Failed to load profile information' })
@@ -52,7 +52,7 @@ export default function SettingsPage(){
   useEffect(()=>{
     if (state.user?.id) {
       setFullName(state.user?.fullName || 'John Doe')
-      setEmail((state.user?.email || 'john@gmail.com').toUpperCase())
+      setEmail((state.user?.email || 'john@gmail.com').toLowerCase())
     }
   }, [state.user])
 
@@ -60,7 +60,7 @@ export default function SettingsPage(){
   useEffect(() => {
     if (state.user?.id) {
       const currentFullName = state.user?.fullName || ''
-      const currentEmail = (state.user?.email || '').toUpperCase()
+      const currentEmail = (state.user?.email || '').toLowerCase()
       const hasNameChanged = fullName !== currentFullName
       const hasEmailChanged = email !== currentEmail
       setHasChanges(hasNameChanged || hasEmailChanged)
@@ -198,7 +198,7 @@ export default function SettingsPage(){
                 try {
                   const userData = await fetchUserProfile()
                   setFullName(userData?.fullName || 'John Doe')
-                  setEmail((userData?.email || 'john@gmail.com').toUpperCase())
+                  setEmail((userData?.email || 'john@gmail.com').toLowerCase())
                   setNotice({ type: 'success', text: 'Profile refreshed successfully!' })
                 } catch (error) {
                   console.error('Failed to refresh profile:', error)
@@ -220,7 +220,7 @@ export default function SettingsPage(){
           <div className="grid h-16 w-16 place-content-center rounded-full bg-neutral-900 text-white text-lg font-semibold">{initials}</div>
           <div className="min-w-0">
             <div className="font-medium text-neutral-900">{fullName}</div>
-            <div className="text-sm text-neutral-500 uppercase">{email}</div>
+            <div className="text-sm text-neutral-500">{email}</div>
           </div>
         </div>
         <div className="border-t" />
@@ -236,8 +236,8 @@ export default function SettingsPage(){
             label="Email Address" 
             type="email" 
             value={email} 
-            onChange={(e)=> setEmail(e.target.value)} 
-            className={`bg-neutral-100 uppercase ${email !== ((state.user?.email || '').toUpperCase()) ? 'ring-2 ring-blue-200' : ''}`} 
+            onChange={(e)=> setEmail(e.target.value.toLowerCase())} 
+            className={`bg-neutral-100 ${email !== ((state.user?.email || '').toLowerCase()) ? 'ring-2 ring-blue-200' : ''}`} 
           />
           <div className="flex justify-end">
             <Button 
