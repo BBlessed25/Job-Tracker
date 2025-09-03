@@ -19,7 +19,9 @@ function NavItem({ to, children }){
       to={to}
       className={[
         "text-sm font-medium rounded-lg px-3 py-2 transition-colors",
-        "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900"
+        "text-neutral-700 hover:bg-neutral-100 hover:text-neutral-900",
+        // Prevent nav from causing horizontal overflow on small screens
+        "whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
       ].join(" ")}
     >
       <motion.span whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }}>
@@ -55,18 +57,20 @@ export function AuthNav(){
   const initials = (name.split(' ').map(p=>p[0]).slice(0,2).join('') || 'J').slice(0,1)
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur">
+    <nav className="sticky top-0 z-40 w-full border-b bg-white/90 backdrop-blur overflow-x-hidden">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Brand/>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <NavItem to="/dashboard">Dashboard</NavItem>
           <NavItem to="/board">Board</NavItem>
           {/* Avatar + Name pill (hover highlight) */}
-          <div className="flex items-center gap-3 pl-2">
+          <div className="flex items-center gap-2 sm:gap-3 pl-2 min-w-0 max-w-[60vw]">
             <div className="grid h-9 w-9 place-content-center rounded-full bg-neutral-900 text-white text-sm font-semibold">
               {initials}
             </div>
-            <NavItem to="/settings">{name}</NavItem>
+            <div className="min-w-0 max-w-full">
+              <NavItem to="/settings">{name}</NavItem>
+            </div>
           </div>
         </div>
       </div>
