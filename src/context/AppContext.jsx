@@ -171,7 +171,7 @@ export function AppProvider({ children }){
           status: job.status?.toLowerCase() || 'wishlist', // Convert status to lowercase
           url: job.link || '', // Map link to url for frontend compatibility
           summary: job.notes || '', // Map notes to summary for frontend compatibility
-          updatedAt: job.updatedAt || job.createdAt || new Date().toISOString().slice(0,10)
+          updatedAt: fmtDate(job.updatedAt || job.createdAt || new Date())
         }))
         
         console.log('Fetched jobs successfully:', mappedJobs)

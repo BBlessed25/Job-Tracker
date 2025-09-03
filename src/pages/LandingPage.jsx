@@ -91,7 +91,7 @@ export default function LandingPage(){
               <span className="grid h-8 w-8 place-content-center rounded-full bg-neutral-900 text-white">JT</span>
               <span className="font-semibold text-neutral-900">JobTracker</span>
             </div>
-            <div className="text-center text-sm text-neutral-600">© 2024 JobTracker. All rights reserved.</div>
+            <div className="text-center text-sm text-neutral-600">© 2025 JobTracker. All rights reserved.</div>
             <div className="flex justify-end gap-6 text-sm text-neutral-600">
               <a href="#" className="hover:text-neutral-900">About</a>
               <a href="#" className="hover:text-neutral-900">Privacy Policy</a>
