@@ -16,8 +16,57 @@ const THEME = {
 
 const STATUSES = ['wishlist','applied','interviewing','offer','rejected']
 
+const STATUS_RULES = {
+  'wishlist': ['applied', 'rejected'],
+  'applied': ['interviewing', 'rejected'], 
+  'interviewing': ['offer', 'rejected'],
+  'offer': ['rejected'],
+  'rejected': ['wishlist', 'applied']
+}
+
 export default function JobBoardPage() {
   const { state, updateJob, deleteJob, addJob, fetchJobs } = useApp() // ⬅️ uses addJob from context
+  
+  // Status validation error and success state
+  const [statusError, setStatusError] = useState('')
+  const [statusSuccess, setStatusSuccess] = useState('')
+
+  // Function to validate status change
+  const validateStatusChange = (currentStatus, newStatus) => {
+    const allowedTransitions = STATUS_RULES[currentStatus] || []
+    return allowedTransitions.includes(newStatus)
+  }
+
+  // Function to show status error
+  const showStatusError = (message) => {
+    setStatusError(message)
+    setStatusSuccess('') // Clear any success message
+    setTimeout(() => setStatusError(''), 3000) // Clear error after 3 seconds
+  }
+
+  // Function to show status success
+  const showStatusSuccess = (message) => {
+    setStatusSuccess(message)
+    setStatusError('') // Clear any error message
+    setTimeout(() => setStatusSuccess(''), 3000) // Clear success after 3 seconds
+  }
+
+  // Custom status change handler with validation
+  const handleStatusChange = (newStatus) => {
+    if (editing) {
+      // For edit mode, validate against current job status
+      const currentStatus = editing.status
+      if (currentStatus !== newStatus) {
+        if (validateStatusChange(currentStatus, newStatus)) {
+          showStatusSuccess('Status successfully updated')
+        } else {
+          showStatusError('Status can\'t be changed')
+          return
+        }
+      }
+    }
+    setStatus(newStatus)
+  }
 
   const grouped = useMemo(() => {
     console.log('Current jobs state:', state.jobs)
@@ -38,8 +87,20 @@ export default function JobBoardPage() {
     e.preventDefault()
     const id = e.dataTransfer.getData('text/plain')
     if (id) {
-      console.log('Dropping job:', id, 'to status:', targetStatus)
-      updateJob(id, { status: targetStatus })
+      // Find the job to get its current status
+      const job = state.jobs.find(j => j.id === id)
+      if (job) {
+        const currentStatus = job.status
+        console.log('Dropping job:', id, 'from', currentStatus, 'to status:', targetStatus)
+        
+        // Validate the status change
+        if (validateStatusChange(currentStatus, targetStatus)) {
+          updateJob(id, { status: targetStatus })
+          showStatusSuccess('Status successfully updated')
+        } else {
+          showStatusError('Status can\'t be changed')
+        }
+      }
     }
   }
 
@@ -99,11 +160,19 @@ export default function JobBoardPage() {
     e.preventDefault()
     if (!editing) return
     
+    // Validate status change if status is being changed
+    const currentStatus = editing.status
+    if (currentStatus !== status && !validateStatusChange(currentStatus, status)) {
+      showStatusError('Status can\'t be changed')
+      return
+    }
+    
     console.log('Updating job:', editing.id, 'with data:', { title, company, url, salary, status, summary: notes })
     
     try {
       await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
       console.log('Job updated successfully')
+      showStatusSuccess('Status successfully updated')
       closeEdit()
     } catch (error) {
       console.error('Failed to update job:', error)
@@ -169,6 +238,20 @@ export default function JobBoardPage() {
           Add Job
         </button>
       </div>
+
+      {/* Status Error Display */}
+      {statusError && (
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-center">
+          <div className="text-sm font-medium text-rose-800">{statusError}</div>
+        </div>
+      )}
+
+      {/* Status Success Display */}
+      {statusSuccess && (
+        <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+          <div className="text-sm font-medium text-emerald-800">{statusSuccess}</div>
+        </div>
+      )}
 
       {/* Not Authenticated State */}
       {state.authStatus !== 'authenticated' && (
@@ -249,7 +332,7 @@ export default function JobBoardPage() {
             company={company} setCompany={setCompany}
             url={url} setUrl={setUrl}
             salary={salary} setSalary={setSalary}
-            status={status} setStatus={setStatus}
+            status={status} setStatus={handleStatusChange}
             notes={notes} setNotes={setNotes}
             onCancel={closeEdit}
             onSubmit={onUpdateJob}
@@ -267,7 +350,7 @@ export default function JobBoardPage() {
             company={company} setCompany={setCompany} companyPlaceholder="e.g. Tech Corp"
             url={url} setUrl={setUrl} urlPlaceholder="https://company.com/job-posting"
             salary={salary} setSalary={setSalary} salaryPlaceholder="e.g. $80,000 – $120,000"
-            status={status} setStatus={setStatus}
+            status={status} setStatus={handleStatusChange}
             notes={notes} setNotes={setNotes} notesPlaceholder="Add any notes about this job..."
             onCancel={closeCreate}
             onSubmit={onAddJob}

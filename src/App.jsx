@@ -28,10 +28,10 @@ function AnimatedRoutes(){
         transition={{ duration: 0.2 }}
       >
         <Routes location={location}>
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/" element={isAuthed ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
+          <Route path="/login" element={isAuthed ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
+          <Route path="/signup" element={isAuthed ? <Navigate to="/dashboard" replace /> : <SignUpPage />} />
+          <Route path="/reset-password" element={isAuthed ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
           <Route path="/dashboard" element={isAuthed ? <DashboardPage /> : <Navigate to="/login" replace />} />
           <Route path="/board" element={isAuthed ? <JobBoardPage /> : <Navigate to="/login" replace />} />
           <Route path="/settings" element={isAuthed ? <SettingsPage /> : <Navigate to="/login" replace />} />
