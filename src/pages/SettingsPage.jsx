@@ -25,6 +25,7 @@ export default function SettingsPage(){
   const [savingProfile, setSavingProfile] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [notice, setNotice] = useState(null)
+  const [hasChanges, setHasChanges] = useState(false)
 
   // Fetch user profile when component mounts
   useEffect(() => {
@@ -55,6 +56,17 @@ export default function SettingsPage(){
     }
   }, [state.user])
 
+  // Track changes to enable/disable save button
+  useEffect(() => {
+    if (state.user?.id) {
+      const currentFullName = state.user?.fullName || ''
+      const currentEmail = (state.user?.email || '').toUpperCase()
+      const hasNameChanged = fullName !== currentFullName
+      const hasEmailChanged = email !== currentEmail
+      setHasChanges(hasNameChanged || hasEmailChanged)
+    }
+  }, [fullName, email, state.user])
+
   const initials = (fullName || 'John Doe').split(' ').map(p=>p[0]).slice(0,2).join('') || 'J'
 
   const onSaveProfile = async (e) => {
@@ -78,16 +90,11 @@ export default function SettingsPage(){
       return
     }
     
-    // Check if email is the same as current user's email
+    // Check if there are any actual changes
     const currentEmail = state.user?.email?.toLowerCase()
     const newEmail = email.toLowerCase()
-    if (currentEmail && newEmail === currentEmail) {
-      setNotice({ type:'error', text:'You are already using this email address. Please enter a different email or keep the current one.' })
-      return
-    }
-    
-    // Check if there are any actual changes
     const currentFullName = state.user?.fullName || ''
+    
     if (currentFullName === fullName && currentEmail === newEmail) {
       setNotice({ type:'info', text:'No changes detected. Your profile is already up to date.' })
       return
@@ -143,13 +150,13 @@ export default function SettingsPage(){
       <div className="mb-4 text-sm">
         <Link to="/dashboard" className="inline-flex items-center gap-2 text-neutral-600 hover:text-neutral-900">
           <span>←</span>
-          <motion.span whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }}>Back to Dashboard</motion.span>
+          <motion.span whileTap={{ scale: 0.96 }} transition={{ duration: 0.2 }} className="font-semibold">Back to Dashboard</motion.span>
         </Link>
       </div>
 
       {/* Title */}
       <h1 className="text-3xl font-bold tracking-tight">Profile Settings</h1>
-      <p className="mb-6 text-neutral-500">Manage your account settings and preferences</p>
+      <p className="mt-2 mb-6 text-neutral-500">Manage your account settings and preferences</p>
 
       {/* Notices */}
       {notice && (
@@ -169,7 +176,16 @@ export default function SettingsPage(){
         <div className="mb-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-neutral-900">
-              <span className="inline-grid h-6 w-6 place-content-center rounded-md bg-neutral-900 text-xs text-white">👤</span>
+              <svg clip-rule="evenodd" fill-rule="evenodd" stroke-linejoin="round" stroke-miterlimit="2" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 fill-current">
+                <g transform="translate(-144 -48)">
+                  <g id="Icon">
+                    <g transform="translate(8)">
+                      <path d="m160 49c-6.071 0-11 4.929-11 11s4.929 11 11 11 11-4.929 11-11-4.929-11-11-11zm0 2c4.967 0 9 4.033 9 9s-4.033 9-9 9-9-4.033-9-9 4.033-9 9-9z"/>
+                    </g>
+                    <path d="m187 94v-8c0-3.448-1.37-6.754-3.808-9.192s-5.744-3.808-9.192-3.808c-3.861 0-8.139 0-12 0-3.448 0-6.754 1.37-9.192 3.808s-3.808 5.744-3.808 9.192v8c0 .552.448 1 1 1s1-.448 1-1c0 0 0-3.749 0-8 0-2.917 1.159-5.715 3.222-7.778s4.861-3.222 7.778-3.222h12c2.917 0 5.715 1.159 7.778 3.222s3.222 4.861 3.222 7.778v8c0 .552.448 1 1 1s1-.448 1-1z"/>
+                  </g>
+                </g>
+              </svg>
               <span className="font-semibold">Profile Information</span>
               {loadingProfile && (
                 <span className="text-sm text-neutral-500">(Loading...)</span>
@@ -194,10 +210,10 @@ export default function SettingsPage(){
               disabled={loadingProfile}
               className="text-sm text-neutral-600 hover:text-neutral-900 disabled:opacity-50"
             >
-              🔄 Refresh
+              
             </button>
           </div>
-        <p className="text-sm text-neutral-500">Update your personal information and contact details</p>
+        <p className="mt-2 text-sm text-neutral-500">Update your personal information and contact details</p>
         </div>
 
         <div className="flex items-center gap-4 pb-5">
@@ -210,12 +226,30 @@ export default function SettingsPage(){
         <div className="border-t" />
 
         <form onSubmit={onSaveProfile} className="mt-5 space-y-4">
-          <Input label="Full Name" value={fullName} onChange={(e)=> setFullName(e.target.value)} className="bg-neutral-100" />
-          <Input label="Email Address" type="email" value={email} onChange={(e)=> setEmail(e.target.value)} className="bg-neutral-100 uppercase" />
+          <Input 
+            label="Full Name" 
+            value={fullName} 
+            onChange={(e)=> setFullName(e.target.value)} 
+            className={`bg-neutral-100 ${fullName !== (state.user?.fullName || '') ? 'ring-2 ring-blue-200' : ''}`} 
+          />
+          <Input 
+            label="Email Address" 
+            type="email" 
+            value={email} 
+            onChange={(e)=> setEmail(e.target.value)} 
+            className={`bg-neutral-100 uppercase ${email !== ((state.user?.email || '').toUpperCase()) ? 'ring-2 ring-blue-200' : ''}`} 
+          />
           <div className="flex justify-end">
-            <Button className="inline-flex items-center gap-2" disabled={savingProfile}>
-              <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">💾</span>
-              {savingProfile ? 'Saving...' : 'Save Changes'}
+            <Button 
+              className="inline-flex items-center gap-2" 
+              disabled={savingProfile || !hasChanges}
+            >
+              <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="h-4 w-4 fill-current">
+                  <path d="M30.71,7.29l-6-6A1,1,0,0,0,24,1H4A3,3,0,0,0,1,4V28a3,3,0,0,0,3,3H28a3,3,0,0,0,3-3V8A1,1,0,0,0,30.71,7.29ZM20,3V9H12V3ZM8,29V22a1,1,0,0,1,1-1H23a1,1,0,0,1,1,1v7Zm21-1a1,1,0,0,1-1,1H26V22a3,3,0,0,0-3-3H9a3,3,0,0,0-3,3v7H4a1,1,0,0,1-1-1V4A1,1,0,0,1,4,3h6V9a2,2,0,0,0,2,2h8a2,2,0,0,0,2-2V3h1.59L29,8.41Z"/>
+                </svg>
+              </span>
+              {savingProfile ? 'Saving...' : hasChanges ? 'Save Changes' : 'No Changes'}
             </Button>
           </div>
         </form>
@@ -225,10 +259,13 @@ export default function SettingsPage(){
       <section className="mb-6 rounded-2xl border border-neutral-200 bg-white p-6">
         <div className="mb-5">
           <div className="flex items-center gap-2 text-neutral-900">
-            <span className="inline-grid h-6 w-6 place-content-center rounded-md bg-neutral-900 text-xs text-white">🔒</span>
+            <svg height="512pt" viewBox="-64 0 512 512" width="512pt" xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 fill-current">
+              <path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0"/>
+              <path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0"/>
+            </svg>
             <span className="font-semibold">Change Password</span>
           </div>
-          <p className="text-sm text-neutral-500">Update your password to keep your account secure</p>
+          <p className="mt-2 text-sm text-neutral-500">Update your password to keep your account secure</p>
         </div>
 
         <form onSubmit={onChangePassword} className="space-y-4">
@@ -237,7 +274,12 @@ export default function SettingsPage(){
           <Input label="Confirm New Password" type="password" placeholder="Confirm your new password" value={confirmNewPassword} onChange={(e)=> setConfirmNewPassword(e.target.value)} className="bg-neutral-100" />
           <div className="flex justify-end">
             <Button className="inline-flex items-center gap-2">
-              <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">🔒</span>
+              <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">
+                <svg height="512pt" viewBox="-64 0 512 512" width="512pt" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 fill-current">
+                  <path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0"/>
+                  <path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0"/>
+                </svg>
+              </span>
               Update Password
             </Button>
           </div>
@@ -265,7 +307,18 @@ export default function SettingsPage(){
             <div className="text-sm text-neutral-600">Sign out of your account on this device</div>
           </div>
           <Button variant="danger" className="inline-flex items-center gap-2 rounded-2xl" onClick={logout}>
-            <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">↪</span>
+            <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">
+              <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="h-4 w-4 fill-current">
+                <path d="M255.15,468.625H63.787c-11.737,0-21.262-9.526-21.262-21.262V64.638c0-11.737,9.526-21.262,21.262-21.262H255.15
+                  c11.758,0,21.262-9.504,21.262-21.262S266.908,0.85,255.15,0.85H63.787C28.619,0.85,0,29.47,0,64.638v382.724
+                  c0,35.168,28.619,63.787,63.787,63.787H255.15c11.758,0,21.262-9.504,21.262-21.262
+                  C276.412,478.129,266.908,468.625,255.15,468.625z"/>
+                <path d="M505.664,240.861L376.388,113.286c-8.335-8.25-21.815-8.143-30.065,0.213s-8.165,21.815,0.213,30.065l92.385,91.173
+                  H191.362c-11.758,0-21.262,9.504-21.262,21.262c0,11.758,9.504,21.263,21.262,21.263h247.559l-92.385,91.173
+                  c-8.377,8.25-8.441,21.709-0.213,30.065c4.167,4.21,9.653,6.336,15.139,6.336c5.401,0,10.801-2.041,14.926-6.124l129.276-127.575
+                  c4.04-3.997,6.336-9.441,6.336-15.139C512,250.302,509.725,244.88,505.664,240.861z"/>
+              </svg>
+            </span>
             Sign Out
           </Button>
         </div>

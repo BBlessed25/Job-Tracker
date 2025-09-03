@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react'
-import { api, setAuth, useApi, mock } from '../utils/api.js'
+import { api, setAuth, getAuthToken, debugAuthState, clearInvalidToken, useApi, mock } from '../utils/api.js'
 import { fmtDate, uid } from '../utils/date.js'
 
 const STATUS = ['wishlist','applied','interviewing','offer','rejected']
@@ -32,11 +32,45 @@ export function AppProvider({ children }){
 
   // bootstrap
   useEffect(()=>{
-    const u = mock.getUser()
-    const j = mock.listJobs()
-    if (u) dispatch({ type:'AUTH_SUCCESS', user:u })
-    if (j?.length) dispatch({ type:'JOBS_SET', jobs:j })
-    else seed()
+    const initializeApp = async () => {
+      if (useApi) {
+        // Check if we have a stored token
+        const token = getAuthToken()
+        console.log('Bootstrap: Checking for stored token...', token ? 'Found' : 'Not found')
+        if (token) {
+          try {
+            // Try to fetch user profile to validate the token
+            console.log('Found stored token, validating...')
+            console.log('Token preview:', token.substring(0, 20) + '...')
+            const { data: user } = await api.get('/users/me')
+            console.log('Token valid, user authenticated:', user)
+            dispatch({ type:'AUTH_SUCCESS', user })
+            
+            // Fetch jobs after successful authentication
+            console.log('Fetching jobs after successful authentication...')
+            await fetchJobs()
+          } catch (err) {
+            console.error('Token validation failed:', err)
+            console.error('Error details:', err.response?.data || err.message)
+            // Token is invalid, clear it
+            console.log('Clearing invalid token and redirecting to login')
+            clearInvalidToken()
+            dispatch({ type:'AUTH_ERROR', error: 'Session expired. Please log in again.' })
+          }
+        } else {
+          console.log('No stored token found - user needs to log in')
+        }
+      } else {
+        // Mock mode - use localStorage
+        const u = mock.getUser()
+        const j = mock.listJobs()
+        if (u) dispatch({ type:'AUTH_SUCCESS', user:u })
+        if (j?.length) dispatch({ type:'JOBS_SET', jobs:j })
+        else seed()
+      }
+    }
+    
+    initializeApp()
   }, [])
 
   function seed(){
@@ -58,6 +92,9 @@ export function AppProvider({ children }){
         setAuth(data.token)
         console.log('Auth token set, now fetching jobs...')
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
+        
+        // Fetch jobs after successful login
+        await fetchJobs()
       } else {
         await new Promise(r=>setTimeout(r,500))
         const user = { id:'1', fullName:'John Doe', email }
@@ -85,6 +122,9 @@ export function AppProvider({ children }){
         console.log('Signup successful, setting auth token:', data.token)
         setAuth(data.token)
         dispatch({ type:'AUTH_SUCCESS', user: data.user })
+        
+        // Fetch jobs after successful signup
+        await fetchJobs()
       } else {
         await new Promise(r=>setTimeout(r,600))
         const user = { id:'1', fullName: name || 'John Doe', email }
@@ -110,6 +150,8 @@ export function AppProvider({ children }){
     try{
       if (useApi){
         console.log('Attempting to fetch jobs from API...')
+        debugAuthState() // Debug authentication state
+        
         const { data } = await api.get('/jobs')
         
         // Map API response to frontend format
@@ -139,8 +181,12 @@ export function AppProvider({ children }){
         errorMessage = 'Request timeout. Please try again.'
       } else if (err.response?.status === 401) {
         errorMessage = 'Authentication required. Please log in again.'
+        // Clear any invalid token
+        setAuth(null)
       } else if (err.response?.status === 403) {
         errorMessage = 'Access denied. Please check your permissions.'
+      } else if (err.response?.status === 404) {
+        errorMessage = 'API endpoint not found. Please check your connection.'
       } else if (err.response?.status >= 500) {
         errorMessage = 'Server error. Please try again later.'
       }
@@ -244,9 +290,27 @@ export function AppProvider({ children }){
 
   const updateProfile = async (data) => {
     if (useApi){
-      console.log('Updating profile with data:', data)
+      // Only send fields that have actually changed
+      const updateData = {}
+      const currentUser = state.user || {}
+      
+      if (data.fullName && data.fullName !== currentUser.fullName) {
+        updateData.fullName = data.fullName
+      }
+      
+      if (data.email && data.email.toLowerCase() !== currentUser.email?.toLowerCase()) {
+        updateData.email = data.email
+      }
+      
+      // If no fields have changed, don't make the API call
+      if (Object.keys(updateData).length === 0) {
+        console.log('No changes detected, skipping API call')
+        return currentUser
+      }
+      
+      console.log('Updating profile with data:', updateData)
       try {
-        const { data:u } = await api.put('/users/me', data)
+        const { data:u } = await api.put('/users/me', updateData)
         console.log('Profile updated successfully:', u)
         dispatch({ type:'AUTH_SUCCESS', user:u })
         return u
