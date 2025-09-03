@@ -210,7 +210,7 @@ export default function JobBoardPage() {
     }
     // Prevent duplicate active applications (same company + role)
     if (hasActiveDuplicate(title, company, status, editing.id)) {
-      showStatusError('application exists for this company or role')
+      showStatusError('application exists for this company or title')
       return
     }
     
@@ -230,7 +230,7 @@ export default function JobBoardPage() {
     e.preventDefault()
     // minimal required: title, company; others optional
     if (hasActiveDuplicate(title, company, status)) {
-      showStatusError('application exists for this company and role.')
+      showStatusError('application exists for this company or  title.')
       return
     }
     await addJob({
@@ -263,7 +263,7 @@ export default function JobBoardPage() {
   }, [isEditOpen, isCreateOpen, confirmDeleteId])
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>

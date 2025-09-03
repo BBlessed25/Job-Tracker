@@ -35,6 +35,8 @@ export function AppProvider({ children }){
   useEffect(()=>{
     const initializeApp = async () => {
       if (useApi) {
+        // Enter a loading state during auth bootstrap so the UI can show a spinner
+        dispatch({ type:'AUTH_LOADING' })
         // Check if we have a stored token
         const token = getAuthToken()
         console.log('Bootstrap: Checking for stored token...', token ? 'Found' : 'Not found')
@@ -60,6 +62,8 @@ export function AppProvider({ children }){
           }
         } else {
           console.log('No stored token found - user needs to log in')
+          // Explicitly mark as unauthenticated so routes can render without redirects
+          dispatch({ type:'LOGOUT' })
         }
       } else {
         // Mock mode - use localStorage
@@ -325,8 +329,16 @@ export function AppProvider({ children }){
       try {
         const { data:u } = await api.put('/users/me', updateData)
         console.log('Profile updated successfully:', u)
-        dispatch({ type:'AUTH_SUCCESS', user:u })
-        return u
+        // Some APIs return { user: {...} } while others return the user object directly.
+        // Also handle APIs that only return a message by merging the update data locally.
+        let updatedUser = (u && (u.user || u)) || {}
+        if (!updatedUser || typeof updatedUser !== 'object' || Object.keys(updatedUser).length === 0) {
+          updatedUser = { ...currentUser, ...updateData }
+        }
+        // Ensure we optimistically merge in updateData if API omitted fields
+        updatedUser = { ...currentUser, ...updatedUser, ...updateData }
+        dispatch({ type:'AUTH_SUCCESS', user: updatedUser })
+        return updatedUser
       } catch (err) {
         console.error('Profile update error:', err.response?.data || err.message)
         

@@ -4,6 +4,7 @@ import { useApp } from './context/AppContext.jsx'
 import { PublicNav, AuthNav } from './components/Navbar.jsx'
 import HelpButton from './components/HelpButton.jsx'
 import StickyPrivacy from './components/StickyPrivacy.jsx'
+import Spinner from './components/Spinner.jsx'
 
 import LandingPage from './pages/LandingPage.jsx'
 import LoginPage from './pages/LoginPage.jsx'
@@ -44,11 +45,21 @@ function AnimatedRoutes(){
 function Shell(){
   const { state } = useApp()
   const isAuthed = state.authStatus === 'authenticated'
+  const isAuthLoading = state.authStatus === 'loading'
   return (
     <BrowserRouter>
       {isAuthed ? <AuthNav /> : <PublicNav />}
-      <main className="min-h-screen bg-neutral-50">
-        <AnimatedRoutes />
+      <main className="min-h-screen bg-neutral-50 overflow-x-hidden">
+        {isAuthLoading ? (
+          <div className="grid min-h-[60vh] place-content-center p-12">
+            <div className="flex items-center gap-3 text-neutral-700">
+              <Spinner />
+              <span className="text-sm">Checking your session…</span>
+            </div>
+          </div>
+        ) : (
+          <AnimatedRoutes />
+        )}
       </main>
       <HelpButton />
       <StickyPrivacy />
