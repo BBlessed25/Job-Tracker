@@ -251,7 +251,7 @@ export default function JobBoardPage() {
     }
     // Optimistically show success in the modal footer-left
     setStatusError('')
-    setCreateSuccess('job updated successfully')
+    setCreateSuccess('job added successfully')
     setTimeout(() => setCreateSuccess(''), 3000)
     try {
       await addJob({
