@@ -301,12 +301,12 @@ export default function SettingsPage(){
       <section className="mb-10 rounded-2xl border border-rose-200 bg-rose-50 p-6">
         <div className="mb-3 font-semibold text-neutral-900">Account Actions</div>
         <div className="mb-4 text-sm text-neutral-600">Manage your account session and access</div>
-        <div className="flex items-center justify-between rounded-2xl border border-rose-200 bg-white/70 p-4">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-white/70 p-4">
+          <div className="min-w-0">
             <div className="font-semibold text-neutral-900">Sign Out</div>
             <div className="text-sm text-neutral-600">Sign out of your account on this device</div>
           </div>
-          <Button variant="danger" className="inline-flex items-center gap-2 rounded-2xl" onClick={logout}>
+          <Button variant="danger" className="inline-flex items-center gap-2 rounded-2xl sm:ml-auto w-full sm:w-auto justify-center" onClick={logout}>
             <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">
               <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" className="h-4 w-4 fill-current">
                 <path d="M255.15,468.625H63.787c-11.737,0-21.262-9.526-21.262-21.262V64.638c0-11.737,9.526-21.262,21.262-21.262H255.15

@@ -28,12 +28,19 @@ function reducer(state, action){
 
 export const AppContext = createContext(null)
 
+// Guard variables to avoid duplicate bootstraps/fetches in StrictMode and
+// to prevent concurrent /jobs requests that can overwhelm the browser
+let __bootstrapDone = false
+let __jobsFetchInFlight = false
+
 export function AppProvider({ children }){
   const [state, dispatch] = useReducer(reducer, initialState)
 
   // bootstrap
   useEffect(()=>{
     const initializeApp = async () => {
+      if (__bootstrapDone) return
+      __bootstrapDone = true
       if (useApi) {
         // Enter a loading state during auth bootstrap so the UI can show a spinner
         dispatch({ type:'AUTH_LOADING' })
@@ -156,6 +163,11 @@ export function AppProvider({ children }){
   }
 
   const fetchJobs = async () => {
+    if (__jobsFetchInFlight) {
+      console.log('fetchJobs skipped: in flight')
+      return
+    }
+    __jobsFetchInFlight = true
     dispatch({ type:'JOBS_LOADING' })
     try{
       if (useApi){
@@ -210,6 +222,9 @@ export function AppProvider({ children }){
       
       dispatch({ type:'JOBS_ERROR', error: errorMessage })
     }
+    finally {
+      __jobsFetchInFlight = false
+    }
   }
 
   const addJob = async (data) => {
@@ -237,7 +252,11 @@ export function AppProvider({ children }){
       console.log('Creating job with data:', jobData)
       const response = await api.post('/jobs/create', jobData)
       console.log('Job created successfully:', response.data)
-      await fetchJobs()
+      try {
+        await fetchJobs()
+      } catch (e) {
+        console.warn('fetchJobs after create failed; job was created. Proceeding without refresh.', e)
+      }
       return
     }
     const next = [...state.jobs, job]
