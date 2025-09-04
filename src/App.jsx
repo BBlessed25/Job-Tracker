@@ -18,6 +18,26 @@ function AnimatedRoutes(){
   const location = useLocation()
   const { state } = useApp()
   const isAuthed = state.authStatus === 'authenticated'
+  const isLoading = state.authStatus === 'loading' || state.authStatus === 'idle'
+
+  function Protected({ children }){
+    if (isAuthed) return children
+    if (isLoading) return null
+    return <Navigate to="/login" replace />
+  }
+
+  // While auth is loading, show a full-screen spinner on all pages
+  // except on the login and signup pages.
+  if (isLoading && location.pathname !== '/login' && location.pathname !== '/signup') {
+    return (
+      <div className="grid min-h-screen place-content-center p-12">
+        <div className="flex items-center gap-3 text-neutral-700">
+          <Spinner />
+          <span className="text-sm">Checking your session…</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <AnimatePresence mode="wait">
@@ -33,9 +53,9 @@ function AnimatedRoutes(){
           <Route path="/login" element={isAuthed ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
           <Route path="/signup" element={isAuthed ? <Navigate to="/dashboard" replace /> : <SignUpPage />} />
           <Route path="/reset-password" element={isAuthed ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
-          <Route path="/dashboard" element={isAuthed ? <DashboardPage /> : <Navigate to="/login" replace />} />
-          <Route path="/board" element={isAuthed ? <JobBoardPage /> : <Navigate to="/login" replace />} />
-          <Route path="/settings" element={isAuthed ? <SettingsPage /> : <Navigate to="/login" replace />} />
+          <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
+          <Route path="/board" element={<Protected><JobBoardPage /></Protected>} />
+          <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
         </Routes>
       </motion.div>
     </AnimatePresence>
@@ -45,21 +65,11 @@ function AnimatedRoutes(){
 function Shell(){
   const { state } = useApp()
   const isAuthed = state.authStatus === 'authenticated'
-  const isAuthLoading = state.authStatus === 'loading'
   return (
     <BrowserRouter>
       {isAuthed ? <AuthNav /> : <PublicNav />}
       <main className="min-h-screen bg-neutral-50 overflow-x-hidden">
-        {isAuthLoading ? (
-          <div className="grid min-h-[60vh] place-content-center p-12">
-            <div className="flex items-center gap-3 text-neutral-700">
-              <Spinner />
-              <span className="text-sm">Checking your session…</span>
-            </div>
-          </div>
-        ) : (
-          <AnimatedRoutes />
-        )}
+        <AnimatedRoutes />
       </main>
       <HelpButton />
       <StickyPrivacy />
