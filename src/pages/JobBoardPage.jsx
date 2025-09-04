@@ -16,13 +16,8 @@ const THEME = {
 
 const STATUSES = ['wishlist','applied','interviewing','offer','rejected']
 
-const STATUS_RULES = {
-  'wishlist': ['applied', 'rejected'],
-  'applied': ['interviewing', 'rejected'], 
-  'interviewing': ['offer', 'rejected'],
-  'offer': ['rejected'],
-  'rejected': ['wishlist', 'applied']
-}
+// Flex status transitions: allow moving a job to any status
+const STATUS_RULES = null
 
 export default function JobBoardPage() {
   const { state, updateJob, deleteJob, addJob, fetchJobs } = useApp() // ⬅️ uses addJob from context
@@ -33,10 +28,7 @@ export default function JobBoardPage() {
   const [cardStatusPrompt, setCardStatusPrompt] = useState({ jobId: null, type: null, message: '' })
 
   // Function to validate status change
-  const validateStatusChange = (currentStatus, newStatus) => {
-    const allowedTransitions = STATUS_RULES[currentStatus] || []
-    return allowedTransitions.includes(newStatus)
-  }
+  const validateStatusChange = () => true
 
   // Function to show status error (optionally for a specific job card)
   const showStatusError = (message, jobId) => {
@@ -62,18 +54,6 @@ export default function JobBoardPage() {
 
   // Custom status change handler with validation
   const handleStatusChange = (newStatus) => {
-    if (editing) {
-      // For edit mode, validate against current job status
-      const currentStatus = editing.status
-      if (currentStatus !== newStatus) {
-        if (validateStatusChange(currentStatus, newStatus)) {
-          showStatusSuccess('Status successfully updated')
-        } else {
-          showStatusError('Status can\'t be changed')
-          return
-        }
-      }
-    }
     setStatus(newStatus)
   }
 
@@ -119,13 +99,9 @@ export default function JobBoardPage() {
         const currentStatus = job.status
         console.log('Dropping job:', id, 'from', currentStatus, 'to status:', targetStatus)
         
-        // Validate the status change
-        if (validateStatusChange(currentStatus, targetStatus)) {
-          updateJob(id, { status: targetStatus })
-          showStatusSuccess('Status successfully updated', id)
-        } else {
-          showStatusError('Status can\'t be changed', id)
-        }
+        // Flexible: always allow status change via drag-and-drop
+        updateJob(id, { status: targetStatus })
+        showStatusSuccess('Status successfully updated', id)
       }
     }
   }
@@ -147,6 +123,9 @@ export default function JobBoardPage() {
   const [salary, setSalary] = useState('')
   const [status, setStatus] = useState('wishlist')
   const [notes, setNotes] = useState('')
+  const [createSuccess, setCreateSuccess] = useState('')
+  const [editSuccess, setEditSuccess] = useState('')
+  const [queuedPrompt, setQueuedPrompt] = useState(null)
 
   // open edit with existing values
   const openEdit = (job) => {
@@ -157,6 +136,9 @@ export default function JobBoardPage() {
     setSalary(job.salary || '')
     setStatus(job.status || 'wishlist')
     setNotes(job.summary || '')
+    setStatusError('')
+    setStatusSuccess('')
+    setEditSuccess('')
     setIsEditOpen(true)
   }
   const closeEdit = () => { setIsEditOpen(false); setEditing(null) }
@@ -170,6 +152,9 @@ export default function JobBoardPage() {
     setSalary('')
     setStatus('wishlist')
     setNotes('')
+    setStatusError('')
+    setStatusSuccess('')
+    setCreateSuccess('')
     setIsCreateOpen(true)
   }
   const closeCreate = () => setIsCreateOpen(false)
@@ -202,12 +187,7 @@ export default function JobBoardPage() {
     e.preventDefault()
     if (!editing) return
     
-    // Validate status change if status is being changed
-    const currentStatus = editing.status
-    if (currentStatus !== status && !validateStatusChange(currentStatus, status)) {
-      showStatusError('Status can\'t be changed')
-      return
-    }
+    // Flexible: do not restrict status changes
     // If nothing changed, show inline prompt and do nothing
     const origTitle = (editing.title || '').trim()
     const origCompany = (editing.company || '').trim()
@@ -240,13 +220,18 @@ export default function JobBoardPage() {
     
     console.log('Updating job:', editing.id, 'with data:', { title, company, url, salary, status, summary: notes })
     
+    // Optimistically show success prompt immediately
+    setStatusError('')
+    setEditSuccess('status successfully updated')
+    setTimeout(() => setEditSuccess(''), 3000)
     try {
       await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
       console.log('Job updated successfully')
-      showStatusSuccess('Status successfully updated', editing.id)
-      closeEdit()
     } catch (error) {
       console.error('Failed to update job:', error)
+      // Replace success with error if request fails
+      setEditSuccess('')
+      showStatusError('Failed to update job')
     }
   }
 
@@ -264,21 +249,37 @@ export default function JobBoardPage() {
       showStatusError('application exists for this company and  job title.')
       return
     }
-    await addJob({
-      title, company, url, salary, status, summary: notes,
-      updatedAt: new Date().toISOString().slice(0,10)
-    })
-    closeCreate()
+    // Optimistically show success in the modal footer-left
+    setStatusError('')
+    setCreateSuccess('job updated successfully')
+    setTimeout(() => setCreateSuccess(''), 3000)
+    try {
+      await addJob({
+        title, company, url, salary, status, summary: notes,
+        updatedAt: new Date().toISOString().slice(0,10)
+      })
+      // Reset form fields (keep modal open for quick successive adds)
+      setTitle('')
+      setCompany('')
+      setUrl('')
+      setSalary('')
+      setStatus('wishlist')
+      setNotes('')
+    } catch (err) {
+      // Replace success with error if request fails
+      setCreateSuccess('')
+      showStatusError('Failed to add job')
+    }
   }
 
   // (Modal-based delete removed in favor of inline confirmation)
 
   // Fetch jobs when component mounts and user is authenticated
   useEffect(() => {
-    if (state.user && state.authStatus === 'authenticated') {
+    if (state.user && state.authStatus === 'authenticated' && state.jobsStatus === 'idle') {
       fetchJobs()
     }
-  }, [state.user, state.authStatus]) // Only fetch when user authentication changes
+  }, [state.user, state.authStatus, state.jobsStatus]) // Only fetch when needed
 
   // close modals on ESC
   useEffect(() => {
@@ -396,7 +397,7 @@ export default function JobBoardPage() {
             status={status} setStatus={handleStatusChange}
             notes={notes} setNotes={setNotes}
             inlineStatusError={statusError}
-            inlineStatusSuccess={statusSuccess}
+            inlineStatusSuccess={editSuccess || statusSuccess}
             onCancel={closeEdit}
             onSubmit={onUpdateJob}
           />
@@ -416,7 +417,7 @@ export default function JobBoardPage() {
             status={status} setStatus={handleStatusChange}
             notes={notes} setNotes={setNotes} notesPlaceholder="Add any notes about this job..."
             inlineStatusError={statusError}
-            inlineStatusSuccess={statusSuccess}
+            inlineStatusSuccess={createSuccess}
             onCancel={closeCreate}
             onSubmit={onAddJob}
             submitLabel="Add Job"
@@ -538,7 +539,7 @@ function Modal({ onClose, children }) {
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-0 grid place-items-center px-4">
-        <div className="w-full max-w-2xl rounded-2xl bg-white shadow-xl">
+        <div className="w-full max-w-lg max-h-[92vh] overflow-y-auto rounded-2xl bg-white shadow-xl">
           {children}
         </div>
       </div>
@@ -575,12 +576,12 @@ function JobForm({
   onCancel, onSubmit, submitLabel,
 }) {
   return (
-    <form onSubmit={onSubmit} className="px-6 pb-6 pt-2 space-y-4">
+    <form onSubmit={onSubmit} className="px-5 pb-5 pt-1 space-y-3">
       <div className="grid grid-cols-1 gap-4">
-        <Input label="Job Title *" value={title} onChange={(e)=> setTitle(e.target.value)} placeholder={titlePlaceholder} />
-        <Input label="Company *" value={company} onChange={(e)=> setCompany(e.target.value)} placeholder={companyPlaceholder} className="bg-neutral-100" />
-        <Input label="Job Link" type="url" value={url} onChange={(e)=> setUrl(e.target.value)} placeholder={urlPlaceholder} />
-        <Input label="Salary" value={salary} onChange={(e)=> setSalary(e.target.value)} placeholder={salaryPlaceholder} className="bg-neutral-100" />
+        <Input label="Job Title *" value={title} onChange={(e)=> setTitle(e.target.value)} placeholder={titlePlaceholder} className="py-2" />
+        <Input label="Company *" value={company} onChange={(e)=> setCompany(e.target.value)} placeholder={companyPlaceholder} className="bg-neutral-100 py-2" />
+        <Input label="Job Link" type="url" value={url} onChange={(e)=> setUrl(e.target.value)} placeholder={urlPlaceholder} className="py-2" />
+        <Input label="Salary" value={salary} onChange={(e)=> setSalary(e.target.value)} placeholder={salaryPlaceholder} className="bg-neutral-100 py-2" />
 
         <label className="block">
           <div className="mb-1.5 text-sm font-medium text-neutral-700">Status</div>
@@ -593,7 +594,7 @@ function JobForm({
           </select>
         </label>
 
-        <Textarea label="Notes" value={notes} onChange={(e)=> setNotes(e.target.value)} placeholder={notesPlaceholder} />
+        <Textarea label="Notes" value={notes} onChange={(e)=> setNotes(e.target.value)} placeholder={notesPlaceholder} rows={3} className="py-2" />
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-3">
