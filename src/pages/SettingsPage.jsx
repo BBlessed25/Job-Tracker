@@ -94,8 +94,10 @@ export default function SettingsPage(){
     const currentEmail = state.user?.email?.toLowerCase()
     const newEmail = email.toLowerCase()
     const currentFullName = state.user?.fullName || ''
+    const nameChanged = currentFullName !== fullName
+    const emailChanged = currentEmail !== newEmail
     
-    if (currentFullName === fullName && currentEmail === newEmail) {
+    if (!nameChanged && !emailChanged) {
       setNotice({ type:'info', text:'No changes detected. Your profile is already up to date.' })
       return
     }
@@ -105,12 +107,18 @@ export default function SettingsPage(){
       // Send email in lowercase to avoid API validation issues
       const emailToSend = email.toLowerCase()
       console.log('Saving profile with data:', { fullName, email: emailToSend })
+      // Optimistic success message (mirrors change password notice)
+      let successText = 'profile updated successfully'
+      if (nameChanged && !emailChanged) successText = 'full name updated successfully'
+      if (emailChanged && !nameChanged) successText = 'email address updated successfully'
+      setNotice({ type:'success', text: successText })
+      try { document.getElementById('settings-notice')?.scrollIntoView({ behavior:'smooth', block:'start' }) } catch {}
       await updateProfile?.({ fullName, email: emailToSend })
-      setNotice({ type:'success', text:'Profile updated successfully!' })
     } catch (error) {
       console.error('Failed to update profile:', error)
       const errorMessage = error.message || 'Failed to update profile. Please try again.'
       setNotice({ type:'error', text: errorMessage })
+      try { document.getElementById('settings-notice')?.scrollIntoView({ behavior:'smooth', block:'start' }) } catch {}
     } finally {
       setSavingProfile(false)
     }
@@ -160,7 +168,7 @@ export default function SettingsPage(){
 
       {/* Notices */}
       {notice && (
-        <div className={
+        <div id="settings-notice" role="status" aria-live="polite" className={
           `mb-6 rounded-2xl border p-4 text-sm ${
             notice.type==='success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 
             notice.type==='info' ? 'border-blue-200 bg-blue-50 text-blue-800' :
@@ -241,6 +249,7 @@ export default function SettingsPage(){
           />
           <div className="flex justify-end">
             <Button 
+              type="submit"
               className="inline-flex items-center gap-2" 
               disabled={savingProfile || !hasChanges}
             >
