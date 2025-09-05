@@ -136,6 +136,14 @@ export function AppProvider({ children }){
         console.log('Signup successful, setting auth token:', data.token)
         setAuth(data.token)
         dispatch({ type:'AUTH_SUCCESS', user: data.user, justSignedUp: true })
+        // Persist member since for newly signed up users (Month YYYY)
+        try {
+          const userId = data.user?.id || data.user?._id
+          if (userId) {
+            const memberSince = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+            localStorage.setItem(`jt_member_since_${userId}`, memberSince)
+          }
+        } catch {}
         try { sessionStorage.setItem('jt_justSignedUp', '1') } catch {}
         
         // Fetch jobs after successful signup
@@ -145,6 +153,10 @@ export function AppProvider({ children }){
         const user = { id:'1', fullName: name || 'John Doe', email }
         mock.setUser(user)
         dispatch({ type:'AUTH_SUCCESS', user, justSignedUp: true })
+        try {
+          const memberSince = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' })
+          localStorage.setItem(`jt_member_since_${user.id}`, memberSince)
+        } catch {}
         try { sessionStorage.setItem('jt_justSignedUp', '1') } catch {}
       }
     }catch(err){
