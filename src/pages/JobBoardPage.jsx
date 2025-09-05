@@ -295,7 +295,7 @@ export default function JobBoardPage() {
   }, [isEditOpen, isCreateOpen, confirmDeleteId])
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8 overflow-x-hidden">
+    <div className="mx-auto max-w-screen-2xl px-4 py-6 sm:py-8 overflow-x-hidden">
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
@@ -346,35 +346,36 @@ export default function JobBoardPage() {
         </div>
       )}
 
-      {/* Two-column layout */}
+      {/* Responsive flex layout: wraps on small, five in a row on xl+ */}
       {state.jobsStatus !== 'loading' && !state.error && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="flex flex-wrap xl:flex-nowrap gap-3 md:gap-x-6 xl:gap-6">
           {STATUSES.map((key) => (
-            <Column
-              key={key}
-              title={THEME[key].title}
-              count={grouped[key].length}
-              theme={THEME[key]}
-              onDrop={(e) => handleDrop(e, key)}
-            >
-              {grouped[key].length === 0 ? (
-                <EmptyState />
-              ) : (
-                <div className="space-y-4">
-                  {grouped[key].map(job => (
-                                      <JobCard
-                    key={job.id}
-                    job={job}
-                    theme={THEME[job.status] || THEME.wishlist}
-                    onEdit={() => openEdit(job)}
-                    onDelete={() => handleDeleteClick(job)}
-                    showDeletePrompt={confirmDeleteId === job.id}
-                    statusPrompt={cardStatusPrompt.jobId === job.id ? cardStatusPrompt : null}
-                  />
-                  ))}
-                </div>
-              )}
-            </Column>
+            <div key={key} className="basis-full md:basis-[calc(50%-0.75rem)] xl:basis-1/5">
+              <Column
+                title={THEME[key].title}
+                count={grouped[key].length}
+                theme={THEME[key]}
+                onDrop={(e) => handleDrop(e, key)}
+              >
+                {grouped[key].length === 0 ? (
+                  <EmptyState />
+                ) : (
+                  <div className="space-y-4">
+                    {grouped[key].map(job => (
+                      <JobCard
+                        key={job.id}
+                        job={job}
+                        theme={THEME[job.status] || THEME.wishlist}
+                        onEdit={() => openEdit(job)}
+                        onDelete={() => handleDeleteClick(job)}
+                        showDeletePrompt={confirmDeleteId === job.id}
+                        statusPrompt={cardStatusPrompt.jobId === job.id ? cardStatusPrompt : null}
+                      />
+                    ))}
+                  </div>
+                )}
+              </Column>
+            </div>
           ))}
         </div>
       )}
