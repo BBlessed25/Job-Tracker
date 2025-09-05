@@ -25,6 +25,7 @@ export default function SettingsPage(){
   const [savingProfile, setSavingProfile] = useState(false)
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [notice, setNotice] = useState(null)
+  const [passwordNotice, setPasswordNotice] = useState(null)
   const [hasChanges, setHasChanges] = useState(false)
   const [memberSince, setMemberSince] = useState('')
 
@@ -81,6 +82,12 @@ export default function SettingsPage(){
       setHasChanges(hasNameChanged || hasEmailChanged)
     }
   }, [fullName, email, state.user])
+
+  useEffect(() => {
+    if (!passwordNotice) return
+    const timeoutId = setTimeout(() => setPasswordNotice(null), 3000)
+    return () => clearTimeout(timeoutId)
+  }, [passwordNotice])
 
   const initials = (fullName || 'John Doe').split(' ').map(p=>p[0]).slice(0,2).join('') || 'J'
 
@@ -142,28 +149,33 @@ export default function SettingsPage(){
   const onChangePassword = async (e) => {
     e.preventDefault()
     if (!currentPassword || !newPassword || !confirmNewPassword){
-      setNotice({ type:'error', text:'Please fill in all password fields' })
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'Please fill in all password fields' })
       return
     }
     if (newPassword !== confirmNewPassword){
-      setNotice({ type:'error', text:'Passwords do not match' })
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'Passwords do not match' })
       return
     }
     
     // Basic password validation
     if (newPassword.length < 6) {
-      setNotice({ type:'error', text:'New password must be at least 6 characters long' })
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'New password must be at least 6 characters long' })
       return
     }
     
     try {
       await changePassword?.({ currentPassword, newPassword })
       setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('')
-      setNotice({ type:'success', text:'Password updated successfully!' })
+      setNotice(null)
+      setPasswordNotice({ type:'success', text:'password updated successfully' })
     } catch (error) {
       console.error('Password change failed:', error)
       const errorMessage = error.message || 'Failed to change password. Please try again.'
-      setNotice({ type:'error', text: errorMessage })
+      setNotice(null)
+      setPasswordNotice({ type:'error', text: errorMessage })
     }
   }
 
@@ -293,14 +305,25 @@ export default function SettingsPage(){
         </div>
 
         <form onSubmit={onChangePassword} className="space-y-4">
-          <Input label="Current Password" type="password" placeholder="Enter your current password" value={currentPassword} onChange={(e)=> setCurrentPassword(e.target.value)} className="bg-neutral-100" />
-          <Input label="New Password" type="password" placeholder="Enter your new password" value={newPassword} onChange={(e)=> setNewPassword(e.target.value)} className="bg-neutral-100" />
-          <Input label="Confirm New Password" type="password" placeholder="Confirm your new password" value={confirmNewPassword} onChange={(e)=> setConfirmNewPassword(e.target.value)} className="bg-neutral-100" />
-          <div className="flex justify-end">
+          <Input label="Current Password" type="password" placeholder="Enter your current password" value={currentPassword} onChange={(e)=> { setPasswordNotice(null); setCurrentPassword(e.target.value) }} className="bg-neutral-100" />
+          <Input label="New Password" type="password" placeholder="Enter your new password" value={newPassword} onChange={(e)=> { setPasswordNotice(null); setNewPassword(e.target.value) }} className="bg-neutral-100" />
+          <Input label="Confirm New Password" type="password" placeholder="Confirm your new password" value={confirmNewPassword} onChange={(e)=> { setPasswordNotice(null); setConfirmNewPassword(e.target.value) }} className="bg-neutral-100" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-h-[1.25rem] text-sm" role="status" aria-live="polite">
+              {passwordNotice && (
+                <span className={
+                  passwordNotice.type==='success' ? 'text-emerald-700' :
+                  passwordNotice.type==='info' ? 'text-blue-700' :
+                  'text-rose-700'
+                }>
+                  {passwordNotice.text}
+                </span>
+              )}
+            </div>
             <Button className="inline-flex items-center gap-2">
               <span className="grid h-5 w-5 place-content-center rounded-md bg-white/10">
                 <svg height="512pt" viewBox="-64 0 512 512" width="512pt" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 fill-current">
-                  <path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875-16-16-16zm0 0"/>
+                  <path d="m336 512h-288c-26.453125 0-48-21.523438-48-48v-224c0-26.476562 21.546875-48 48-48h288c26.453125 0 48 21.523438 48 48v224c0 26.476562-21.546875 48-48 48zm-288-288c-8.8125 0-16 7.167969-16 16v224c0 8.832031 7.1875 16 16 16h288c8.8125 0 16-7.167969 16-16v-224c0-8.832031-7.1875 16-16 16zm0 0"/>
                   <path d="m304 224c-8.832031 0-16-7.167969-16-16v-80c0-52.929688-43.070312-96-96-96s-96 43.070312-96 96v80c0 8.832031-7.167969 16-16 16s-16-7.167969-16-16v-80c0-70.59375 57.40625-128 128-128s128 57.40625 128 128v80c0 8.832031-7.167969 16-16 16zm0 0"/>
                 </svg>
               </span>
