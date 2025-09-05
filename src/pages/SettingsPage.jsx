@@ -26,6 +26,7 @@ export default function SettingsPage(){
   const [loadingProfile, setLoadingProfile] = useState(false)
   const [notice, setNotice] = useState(null)
   const [hasChanges, setHasChanges] = useState(false)
+  const [memberSince, setMemberSince] = useState('')
 
   // Fetch user profile when component mounts
   useEffect(() => {
@@ -53,6 +54,20 @@ export default function SettingsPage(){
     if (state.user?.id) {
       setFullName(state.user?.fullName || 'John Doe')
       setEmail((state.user?.email || 'john@gmail.com').toLowerCase())
+      // Resolve Member Since once per user change: prefer backend createdAt, else localStorage
+      try {
+        const createdAt = state.user?.createdAt
+        let resolved = ''
+        if (createdAt) {
+          const d = new Date(createdAt)
+          resolved = d.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+        } else {
+          const id = state.user?.id
+          const stored = id ? localStorage.getItem(`jt_member_since_${id}`) : ''
+          if (stored) resolved = stored
+        }
+        if (resolved) setMemberSince(resolved)
+      } catch {}
     }
   }, [state.user])
 
@@ -301,7 +316,7 @@ export default function SettingsPage(){
         <div className="mb-4 text-sm text-neutral-500">Your account details and preferences</div>
         <div className="divide-y divide-neutral-200">
           <Row label="Account ID" value={state.user?.id || 1} />
-          <Row label="Member Since" value="January 2024" />
+          <Row label="Member Since" value={memberSince || 'January 2024'} />
           <Row label="Account Status" value={<span className="text-emerald-600">Active</span>} />
         </div>
       </section>
