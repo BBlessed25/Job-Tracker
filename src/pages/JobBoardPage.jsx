@@ -436,7 +436,7 @@ export default function JobBoardPage() {
 function Column({ title, count, theme, onDrop, children }) {
   return (
     <section
-      className="rounded-2xl border border-neutral-200 bg-white shadow-sm"
+      className="rounded-2xl border border-neutral-200 bg-white shadow-sm xl:h-[70vh] xl:flex xl:flex-col"
       onDragOver={(e)=> e.preventDefault()}
       onDrop={onDrop}
     >
@@ -445,7 +445,7 @@ function Column({ title, count, theme, onDrop, children }) {
         <div className="text-sm font-semibold tracking-wider text-neutral-900">{title}</div>
         <span className="rounded-lg bg-white/70 px-2 py-1 text-xs font-semibold text-neutral-700">{count}</span>
       </div>
-      <div className="p-4">
+      <div className="p-4 xl:flex-1 xl:overflow-y-auto">
         {children}
       </div>
     </section>
