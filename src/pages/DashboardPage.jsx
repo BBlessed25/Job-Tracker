@@ -42,12 +42,16 @@ export default function DashboardPage(){
             <div className="text-neutral-900 font-semibold">Profile Information</div>
             <div className="text-sm text-neutral-500">Your account details</div>
           </div>
-          <Link to="/settings" className="text-neutral-400 hover:text-neutral-600">›</Link>
+          <Link to="/settings" className="text-neutral-400 hover:text-neutral-600 text-3xl" aria-label="Go to Settings">›</Link>
         </div>
         <div className="mt-5 flex items-center gap-4">
-          <div className="grid h-14 w-14 place-content-center rounded-full bg-neutral-900 text-white text-lg font-semibold">
+          <Link
+            to="/settings"
+            aria-label="Go to Settings"
+            className="grid h-14 w-14 place-content-center rounded-full bg-neutral-900 text-white text-lg font-semibold hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-neutral-300 cursor-pointer"
+          >
             {(state.user?.fullName || 'John Doe').split(' ').map(p=>p[0]).slice(0,2).join('') || 'J'}
-          </div>
+          </Link>
           <div className="min-w-0">
             <div className="font-medium text-neutral-900">{state.user?.fullName || 'John Doe'}</div>
             <div className="text-sm text-neutral-500">{state.user?.email || 'frontend@gmail.com'}</div>

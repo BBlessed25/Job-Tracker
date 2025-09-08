@@ -158,14 +158,40 @@ export default function SettingsPage(){
     }
     if (newPassword !== confirmNewPassword){
       setNotice(null)
-      setPasswordNotice({ type:'error', text:'Passwords do not match' })
+      setPasswordNotice({ type:'error', text:'New passwords do not match' })
+      return
+    }
+    // Prevent using the same password as current
+    if (currentPassword && newPassword && currentPassword === newPassword) {
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'Please change password using a diffferent one' })
       return
     }
     
-    // Basic password validation
-    if (newPassword.length < 6) {
+    // Use the same password requirements as SignUpPage
+    if (newPassword.length < 8) {
       setNotice(null)
-      setPasswordNotice({ type:'error', text:'New password must be at least 6 characters long' })
+      setPasswordNotice({ type:'error', text:'New password must be at least 8 characters long' })
+      return
+    }
+    if (!/(?=.*[a-z])/.test(newPassword)) {
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'New password must contain at least one lowercase letter' })
+      return
+    }
+    if (!/(?=.*[A-Z])/.test(newPassword)) {
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'New password must contain at least one uppercase letter' })
+      return
+    }
+    if (!/(?=.*\d)/.test(newPassword)) {
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'New password must contain at least one number' })
+      return
+    }
+    if (!/(?=.[!@#$%^&(),.?":{}|<>])/.test(newPassword)) {
+      setNotice(null)
+      setPasswordNotice({ type:'error', text:'New password must contain at least one special character' })
       return
     }
     
@@ -174,7 +200,7 @@ export default function SettingsPage(){
       await changePassword?.({ currentPassword, newPassword })
       setCurrentPassword(''); setNewPassword(''); setConfirmNewPassword('')
       setNotice(null)
-      setPasswordNotice({ type:'success', text:'password updated successfully' })
+      setPasswordNotice({ type:'success', text:'Password updated successfully' })
     } catch (error) {
       console.error('Password change failed:', error)
       const errorMessage = error.message || 'Failed to change password. Please try again.'
