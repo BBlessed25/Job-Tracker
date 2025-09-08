@@ -174,13 +174,15 @@ export function AppProvider({ children }){
     try { sessionStorage.removeItem('jt_justSignedUp') } catch {}
   }
 
-  const fetchJobs = async () => {
+  const fetchJobs = async (opts = {}) => {
     if (__jobsFetchInFlight) {
       console.log('fetchJobs skipped: in flight')
       return
     }
     __jobsFetchInFlight = true
-    dispatch({ type:'JOBS_LOADING' })
+    if (!opts.silent) {
+      dispatch({ type:'JOBS_LOADING' })
+    }
     try{
       if (useApi){
         console.log('Attempting to fetch jobs from API...')
@@ -265,7 +267,7 @@ export function AppProvider({ children }){
       const response = await api.post('/jobs/create', jobData)
       console.log('Job created successfully:', response.data)
       try {
-        await fetchJobs()
+        await fetchJobs({ silent: true })
       } catch (e) {
         console.warn('fetchJobs after create failed; job was created. Proceeding without refresh.', e)
       }
@@ -301,7 +303,8 @@ export function AppProvider({ children }){
       console.log('Updating job with API data:', apiUpdates)
       // Use PUT method as specified in the API documentation
       await api.put(`/jobs/${id}`, apiUpdates)
-      await fetchJobs()
+      // Refresh jobs silently so UI doesn't jump to full-screen loader
+      await fetchJobs({ silent: true })
       return
     }
     const next = state.jobs.map(j => j.id === id ? { ...j, ...updates, updatedAt: fmtDate(new Date()) } : j)
