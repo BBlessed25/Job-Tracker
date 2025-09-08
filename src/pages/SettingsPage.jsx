@@ -164,7 +164,7 @@ export default function SettingsPage(){
     // Prevent using the same password as current
     if (currentPassword && newPassword && currentPassword === newPassword) {
       setNotice(null)
-      setPasswordNotice({ type:'error', text:'Please change password using a diffferent one' })
+      setPasswordNotice({ type:'error', text:'Your new password cannot be the same as your current password' })
       return
     }
     
