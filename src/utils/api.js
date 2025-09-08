@@ -4,7 +4,7 @@ import axios from 'axios'
 export const api = axios.create({
   baseURL: 'https://seamfix-jobtracker-apis.onrender.com/api',
   withCredentials: false,
-  timeout: 10000, // 10 second timeout
+  timeout: 30000, // 10 second timeout
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
