@@ -98,10 +98,14 @@ export default function JobBoardPage() {
       if (job) {
         const currentStatus = job.status
         console.log('Dropping job:', id, 'from', currentStatus, 'to status:', targetStatus)
-        
-        // Flexible: always allow status change via drag-and-drop
+        // If dropped into the same column, do nothing (no prompt)
+        if (currentStatus === targetStatus) {
+          return
+        }
+
+        // Flexible: allow status change via drag-and-drop
         updateJob(id, { status: targetStatus })
-        showStatusSuccess('Status successfully updated', id)
+        showStatusSuccess('Status updated successfully', id)
       }
     }
   }
@@ -209,12 +213,12 @@ export default function JobBoardPage() {
       origStatus === newStatus &&
       origNotes === newNotes
     if (noChanges) {
-      showStatusError('no new changes were made')
+      showStatusError('No new changes were made')
       return
     }
     // Prevent duplicate active applications (same company + role)
     if (hasActiveDuplicate(title, company, status, editing.id)) {
-      showStatusError('application exists for this company and job title')
+      showStatusError('Application exists for this company and job title')
       return
     }
     
@@ -222,7 +226,7 @@ export default function JobBoardPage() {
     
     // Optimistically show success prompt immediately
     setStatusError('')
-    setEditSuccess('status successfully updated')
+    setEditSuccess('Status updated successfully')
     setTimeout(() => setEditSuccess(''), 3000)
     try {
       await updateJob(editing.id, { title, company, url, salary, status, summary: notes })
@@ -246,12 +250,12 @@ export default function JobBoardPage() {
     }
     // minimal required: title, company; others optional
     if (hasActiveDuplicate(title, company, status)) {
-      showStatusError('application exists for this company and  job title.')
+      showStatusError('Application exists for this company and  job title.')
       return
     }
     // Optimistically show success in the modal footer-left
     setStatusError('')
-    setCreateSuccess('job added successfully')
+    setCreateSuccess('Job added successfully')
     setTimeout(() => setCreateSuccess(''), 3000)
     try {
       await addJob({
@@ -265,6 +269,8 @@ export default function JobBoardPage() {
       setSalary('')
       setStatus('wishlist')
       setNotes('')
+      // Auto-close the modal after 5 seconds
+      try { setTimeout(() => { if (isCreateOpen) closeCreate() }, 5000) } catch {}
     } catch (err) {
       // Replace success with error if request fails
       setCreateSuccess('')
@@ -463,11 +469,11 @@ function EmptyState() {
 function JobCard({ job, theme, onEdit, onDelete, showDeletePrompt, statusPrompt }) {
   return (
     <div
-      className="relative rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm"
+      className="relative rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm overflow-hidden"
       draggable
       onDragStart={(e)=> e.dataTransfer.setData('text/plain', job.id)}
     >
-      <span className={`absolute left-0 top-3 bottom-3 w-1.5 rounded-full ${theme.accent}`} aria-hidden />
+      <span className={`absolute inset-y-0 left-0 w-1 rounded-l-2xl ${theme.accent}`} aria-hidden />
 
       {/* icon buttons */}
       <div className="absolute right-4 top-4 flex items-center gap-3 text-neutral-500">

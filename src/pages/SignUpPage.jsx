@@ -58,7 +58,7 @@ export default function SignUpPage() {
       await signup(n, eTrim, p)
       navigate('/dashboard', { state: { newSignup: true } })
     } catch (err) {
-      setError('Signup failed. Please try again.')
+      setError('')
     }
   }
 
