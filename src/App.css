@@ -1,1 +1,14 @@
 @import "tailwindcss";
+
+/* Smooth fade transitions for route changes */
+.fade-transition {
+  transition: opacity 0.4s ease-in-out;
+}
+
+/* Ensure smooth rendering during transitions */
+* {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -moz-backface-visibility: hidden;
+  -ms-backface-visibility: hidden;
+}
