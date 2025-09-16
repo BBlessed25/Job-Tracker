@@ -133,9 +133,9 @@ export default function SettingsPage(){
       const emailToSend = email.toLowerCase()
       console.log('Saving profile with data:', { fullName, email: emailToSend })
       // Optimistic success message (mirrors change password notice)
-      let successText = 'profile updated successfully'
+      let successText = 'Profile updated successfully'
       if (nameChanged && !emailChanged) successText = 'Full Name updated successfully'
-      if (emailChanged && !nameChanged) successText = 'Email address updated successfully'
+      if (emailChanged && !nameChanged) successText = 'Email Address updated successfully'
       setNotice({ type:'success', text: successText })
       try { document.getElementById('settings-notice')?.scrollIntoView({ behavior:'smooth', block:'start' }) } catch {}
       await updateProfile?.({ fullName, email: emailToSend })
