@@ -145,7 +145,10 @@ export default function JobBoardPage() {
     setEditSuccess('')
     setIsEditOpen(true)
   }
-  const closeEdit = () => { setIsEditOpen(false); setEditing(null) }
+  const closeEdit = () => { 
+    setIsEditOpen(false); 
+    setEditing(null);
+  }
 
   // open create with placeholders
   const openCreate = () => {
@@ -167,9 +170,7 @@ export default function JobBoardPage() {
   const handleDeleteClick = async (job) => {
     if (confirmDeleteId === job.id) {
       try {
-        console.log('Deleting job:', job.id)
         await deleteJob(job.id)
-        console.log('Job deleted successfully')
       } catch (error) {
         console.error('Failed to delete job:', error)
       } finally {
@@ -180,12 +181,14 @@ export default function JobBoardPage() {
     }
   }
 
+
   // Auto-dismiss delete confirmation prompt after 1.5s
   useEffect(() => {
     if (!confirmDeleteId) return
     const timerId = setTimeout(() => setConfirmDeleteId(null), 1500)
     return () => clearTimeout(timerId)
   }, [confirmDeleteId])
+
 
   const onUpdateJob = async (e) => {
     e.preventDefault()
@@ -471,12 +474,21 @@ function JobCard({ job, theme, onEdit, onDelete, showDeletePrompt, statusPrompt 
     <div
       className="relative rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm overflow-hidden"
       draggable
-      onDragStart={(e)=> e.dataTransfer.setData('text/plain', job.id)}
+      onDragStart={(e)=> {
+        e.dataTransfer.setData('text/plain', job.id);
+      }}
     >
       <span className={`absolute inset-y-0 left-0 w-1 rounded-l-2xl ${theme.accent}`} aria-hidden />
 
-      {/* icon buttons */}
-      <div className="absolute right-4 top-4 flex items-center gap-3 text-neutral-500">
+      {/* Non-draggable button overlay */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-10"
+        style={{ zIndex: 10 }}
+      >
+        <div 
+          className="absolute right-2 top-2 flex items-center gap-2 text-neutral-500 pointer-events-auto"
+          style={{ pointerEvents: 'auto' }}
+        >
         {job.url && (
           <a
             href={job.url}
@@ -491,21 +503,44 @@ function JobCard({ job, theme, onEdit, onDelete, showDeletePrompt, statusPrompt 
             </svg>
           </a>
         )}
-        <button aria-label="Edit job" onClick={(e)=> { e.stopPropagation(); onEdit(); }} className="rounded-md p-1 hover:text-neutral-800 hover:bg-neutral-100">
+        <button 
+          aria-label="Edit job" 
+          onClick={() => {
+            onEdit();
+          }}
+          className="rounded-md p-1 hover:text-neutral-800 hover:bg-neutral-100"
+          style={{ 
+            pointerEvents: 'auto',
+            zIndex: 1000,
+            position: 'relative'
+          }}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
           </svg>
         </button>
-        <button aria-label="Delete job" onClick={(e)=> { e.stopPropagation(); onDelete(); }} className="rounded-md p-1 hover:text-rose-700 hover:bg-rose-50">
+        <button 
+          aria-label="Delete job" 
+          onClick={() => {
+            onDelete();
+          }}
+          className="rounded-md p-1 hover:text-rose-700 hover:bg-rose-50"
+          style={{ 
+            pointerEvents: 'auto',
+            zIndex: 1000,
+            position: 'relative'
+          }}
+        >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
             <path d="M10 11v6M14 11v6" /><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2" />
           </svg>
         </button>
+        </div>
       </div>
 
-      <div className="ml-3">
-        <div className="mb-1 text-[15px] font-semibold text-neutral-900">{job.title}</div>
+      <div className="ml-3 pr-16 sm:pr-20">
+        <div className="mb-1 text-[15px] font-semibold text-neutral-900 break-words leading-tight">{job.title}</div>
         <div className="text-sm text-neutral-600">{job.company}</div>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -521,7 +556,7 @@ function JobCard({ job, theme, onEdit, onDelete, showDeletePrompt, statusPrompt 
 
         {job.summary && <p className="mt-3 text-sm text-neutral-600">{job.summary}</p>}
 
-        <div className="mt-4 border-t pt-2 text-sm text-neutral-400 flex items-center justify-between">
+        <div className="mt-4 border-t pt-2 text-sm text-neutral-400 flex items-center justify-between pr-4">
           <span>Updated {job.updatedAt || '2024-01-09'}</span>
           <span className="flex items-center gap-3">
             {statusPrompt && (
@@ -529,8 +564,9 @@ function JobCard({ job, theme, onEdit, onDelete, showDeletePrompt, statusPrompt 
                 {statusPrompt.message}
               </span>
             )}
+            {/* Delete confirmation prompt on extreme right */}
             {showDeletePrompt && (
-              <span className="font-medium text-rose-600">confirm again to delete</span>
+              <span className="font-medium text-rose-600 ml-8">Confirm again to delete</span>
             )}
           </span>
         </div>
@@ -604,7 +640,7 @@ function JobForm({
         <Textarea label="Notes" value={notes} onChange={(e)=> setNotes(e.target.value)} placeholder={notesPlaceholder} rows={3} className="py-2" />
       </div>
 
-      <div className="mt-2 flex items-center justify-between gap-3">
+      <div className="mt-2 flex items-center justify-between gap-3 pr-4">
         <div className="text-sm">
           {inlineStatusError && (
             <span className="font-medium text-rose-600">{inlineStatusError}</span>
@@ -617,9 +653,12 @@ function JobForm({
           <button type="button" onClick={onCancel} className="rounded-2xl border border-neutral-300 bg-white px-4 py-2 text-neutral-800 hover:bg-neutral-50">
             Cancel
           </button>
-          <Button type="submit" className="px-4 py-2">
+          <button 
+            type="submit" 
+            className="inline-flex items-center justify-center font-medium transition-colors disabled:opacity-60 disabled:pointer-events-none px-4 py-2 rounded-2xl bg-neutral-900 text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-neutral-300"
+          >
             {submitLabel || (mode === 'edit' ? 'Update Job' : 'Add Job')}
-          </Button>
+          </button>
         </div>
       </div>
     </form>
