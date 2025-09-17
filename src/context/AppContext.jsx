@@ -18,6 +18,7 @@ function reducer(state, action){
     case 'AUTH_LOADING': return { ...state, authStatus:'loading', error:null }
     case 'AUTH_SUCCESS': return { ...state, user:action.user, authStatus:'authenticated', error:null, justSignedUp: !!action.justSignedUp }
     case 'AUTH_ERROR': return { ...state, authStatus:'error', error:action.error }
+    case 'CLEAR_ERROR': return { ...state, error:null }
     case 'LOGOUT': return { ...state, user:null, authStatus:'unauthenticated' }
     case 'JOBS_LOADING': return { ...state, jobsStatus:'loading' }
     case 'JOBS_SET': return { ...state, jobs:action.jobs, jobsStatus:'succeeded' }
@@ -423,7 +424,11 @@ export function AppProvider({ children }){
     await new Promise(r=>setTimeout(r,400))
   }
 
-  const value = useMemo(()=>({ state, login, signup, logout, fetchJobs, addJob, updateJob, deleteJob, updateProfile, changePassword, fetchUserProfile }), [state])
+  const clearError = () => {
+    dispatch({ type: 'CLEAR_ERROR' })
+  }
+
+  const value = useMemo(()=>({ state, login, signup, logout, fetchJobs, addJob, updateJob, deleteJob, updateProfile, changePassword, fetchUserProfile, clearError }), [state])
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
 }
