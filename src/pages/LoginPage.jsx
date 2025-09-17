@@ -1,16 +1,28 @@
 // src/pages/LoginPage.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useApp } from '../context/AppContext.jsx'
 import Button from '../components/Button.jsx'
 import { Input } from '../components/Input.jsx'
 import { useNavigate, Link } from 'react-router-dom'
 
 export default function LoginPage() {
-  const { state, login } = useApp()
+  const { state, login, clearError } = useApp()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const navigate = useNavigate()
+
+  // Auto-hide messages after 3 seconds
+  useEffect(() => {
+    if (error || state.error) {
+      const timer = setTimeout(() => {
+        setError('')
+        clearError() // Clear global error state
+      }, 3000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [error, state.error, clearError])
 
   const onSubmit = async (e) => {
     e.preventDefault()

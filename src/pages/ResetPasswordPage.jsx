@@ -1,5 +1,5 @@
 // src/pages/ResetPasswordPage.jsx
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import Button from '../components/Button.jsx'
 import { Input } from '../components/Input.jsx'
@@ -7,21 +7,67 @@ import { Input } from '../components/Input.jsx'
 export default function ResetPasswordPage() {
   const [email, setEmail] = useState('')
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  // Auto-hide messages after 3 seconds
+  useEffect(() => {
+    if (error || success) {
+      const timer = setTimeout(() => {
+        setError('')
+        setSuccess('')
+      }, 3000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [error, success])
 
   const onSubmit = async (e) => {
     e.preventDefault()
-    const eTrim = email.trim()
+    const eTrim = email.trim().toLowerCase()
 
     if (!eTrim) {
       setError('Please enter your email address')
       return
     }
 
-    // Accept ANY non-empty email as a successful request
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(eTrim)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setError('')
-    // You could show a toast here instead of redirecting
-    navigate('/login')
+    setSuccess('')
+    setLoading(true)
+
+    try {
+      const requestOptions = {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: eTrim }),
+        redirect: 'follow'
+      }
+
+      const response = await fetch("https://seamfix-jobtracker-apis.onrender.com/api/auth/forgotPassword", requestOptions)
+      const result = await response.text()
+      
+      if (response.ok) {
+        setSuccess('Password reset link has been sent to your email address')
+        setEmail('')
+      } else {
+        setError('Failed to send reset link. Please try again.')
+      }
+    } catch (err) {
+      console.error('Forgot password error:', err)
+      setError('Network error. Please check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -42,9 +88,10 @@ export default function ResetPasswordPage() {
           />
 
           {error && <p className="text-sm text-rose-600">{error}</p>}
+          {success && <p className="text-sm text-green-600">{success}</p>}
 
-          <Button type="submit" className="mt-2 w-full">
-            Send Reset Link
+          <Button type="submit" className="mt-2 w-full" loading={loading}>
+            {loading ? 'Sending...' : 'Send Reset Link'}
           </Button>
         </form>
 
