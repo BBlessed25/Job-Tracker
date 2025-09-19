@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage.jsx'
 import JobBoardPage from './pages/JobBoardPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx'
+import ForgotPasswordPage from './pages/ForgotPasswordPage.jsx'
 
 function AnimatedRoutes(){
   const location = useLocation()
@@ -55,6 +56,7 @@ function AnimatedRoutes(){
           <Route path="/" element={isAuthed ? <Navigate to="/dashboard" replace /> : <LandingPage />} />
           <Route path="/login" element={isAuthed ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
           <Route path="/signup" element={isAuthed ? <Navigate to="/dashboard" replace /> : <SignUpPage />} />
+          <Route path="/forgot-password" element={isAuthed ? <Navigate to="/dashboard" replace /> : <ForgotPasswordPage />} />
           <Route path="/reset-password" element={isAuthed ? <Navigate to="/dashboard" replace /> : <ResetPasswordPage />} />
           <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
           <Route path="/board" element={<Protected><JobBoardPage /></Protected>} />

@@ -84,8 +84,8 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-6 text-center text-sm">
-          {/* Updated to route to ResetPasswordPage */}
-          <Link to="/reset-password" className="text-neutral-700 hover:underline">
+          {/* Updated to route to ForgotPasswordPage */}
+          <Link to="/forgot-password" className="text-neutral-700 hover:underline">
             Forgot your password?
           </Link>
           <div className="mt-2 text-neutral-500">
