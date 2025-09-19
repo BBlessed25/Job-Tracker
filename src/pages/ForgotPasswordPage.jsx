@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
         redirect: 'follow'
       }
 
-      const response = await fetch("https://seamfix-jobtracker-apis.onrender.com/api/auth/forgotPassword", requestOptions)
+      const response = await fetch("https://seamfix-jobtracker-apis.onrender.com/api/auth/forgot-password", requestOptions)
       const result = await response.text()
       
       if (response.ok) {
