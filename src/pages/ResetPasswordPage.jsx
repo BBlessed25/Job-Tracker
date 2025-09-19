@@ -87,7 +87,7 @@ export default function ResetPasswordPage() {
         redirect: 'follow'
       }
 
-      const response = await fetch("https://seamfix-jobtracker-apis.onrender.com/api/auth/resetPassword", requestOptions)
+      const response = await fetch("https://seamfix-jobtracker-apis.onrender.com/api/auth/reset-password", requestOptions)
       const result = await response.text()
       
       if (response.ok) {
