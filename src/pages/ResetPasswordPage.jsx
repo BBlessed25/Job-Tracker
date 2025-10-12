@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import Button from '../components/Button.jsx'
 import { Input } from '../components/Input.jsx'
+import { api } from '../utils/api.js'
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
@@ -75,35 +76,22 @@ export default function ResetPasswordPage() {
         return
       }
 
-      const requestOptions = {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          password: pTrim,
-          token: token
-        }),
-        redirect: 'follow'
-      }
-
-      const response = await fetch("https://seamfix-jobtracker-apis.onrender.com/api/auth/reset-password", requestOptions)
-      const result = await response.text()
+      await api.put('/auth/reset-password', { 
+        password: pTrim,
+        token: token
+      })
       
-      if (response.ok) {
-        setSuccess('Password has been reset successfully. You can now sign in with your new password.')
-        setPassword('')
-        setConfirmPassword('')
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          navigate('/login')
-        }, 3000)
-      } else {
-        setError('Failed to reset password. The link may have expired. Please request a new password reset.')
-      }
+      setSuccess('Password has been reset successfully. You can now sign in with your new password.')
+      setPassword('')
+      setConfirmPassword('')
+      // Redirect to login after 3 seconds
+      setTimeout(() => {
+        navigate('/login')
+      }, 3000)
     } catch (err) {
       console.error('Reset password error:', err)
-      setError('Network error. Please check your connection and try again.')
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to reset password. The link may have expired. Please request a new password reset.'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }

@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import Button from './Button.jsx'
 import { useApp } from '../context/AppContext.jsx'
 import { motion } from 'framer-motion'
@@ -13,19 +13,43 @@ function Brand(){
 }
 
 export function PublicNav(){
+  const location = useLocation()
+  const isLoginPage = location.pathname === '/login'
+  const isSignupPage = location.pathname === '/signup'
+  
   return (
     <nav className="sticky top-0 z-40 w-full border-b bg-white/80 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
         <Brand/>
         <div className="flex items-center gap-3">
-          <Link className="text-sm text-neutral-700 hover:text-neutral-900" to="/login">
-            <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Login</motion.span>
-          </Link>
-          <Link to="/signup">
-            <Button className="px-4 py-2">
+          {isLoginPage ? (
+            <Link to="/login">
+              <Button className="px-4 py-2">
+                <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Login</motion.span>
+              </Button>
+            </Link>
+          ) : (
+            <Link 
+              className="text-sm text-neutral-700 hover:text-black transition-colors" 
+              to="/login"
+            >
+              <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Login</motion.span>
+            </Link>
+          )}
+          {isSignupPage ? (
+            <Link to="/signup">
+              <Button className="px-4 py-2">
+                <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Sign Up</motion.span>
+              </Button>
+            </Link>
+          ) : (
+            <Link 
+              className="text-sm text-neutral-700 hover:text-black transition-colors" 
+              to="/signup"
+            >
               <motion.span whileTap={{scale:0.96}} transition={{duration:0.2}}>Sign Up</motion.span>
-            </Button>
-          </Link>
+            </Link>
+          )}
         </div>
       </div>
     </nav>
